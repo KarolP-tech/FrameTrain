@@ -1,0 +1,85 @@
+// Prisma Schema for FrameTrain Database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  apiKeys       ApiKey[]
+  models        Model[]
+  
+  @@map("users")
+}
+
+model ApiKey {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  key           String    @unique
+  isValid       Boolean   @default(true) @map("is_valid")
+  expiresAt     DateTime? @map("expires_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  lastUsedAt    DateTime? @map("last_used_at")
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([key])
+  @@index([userId])
+  @@map("api_keys")
+}
+
+model Model {
+  id            String    @id @default(cuid())
+  userId        String    @map("user_id")
+  name          String
+  description   String?
+  status        String    @default("created") // created, training, completed, failed
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+  
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  versions      ModelVersion[]
+  
+  @@index([userId])
+  @@map("models")
+}
+
+model ModelVersion {
+  id            String    @id @default(cuid())
+  modelId       String    @map("model_id")
+  version       Int
+  parameters    String    // JSON string: Training parameters (epochs, batch_size, etc.)
+  metrics       String?   // JSON string: Training metrics (loss, accuracy, etc.)
+  status        String    @default("pending") // pending, training, completed, failed
+  createdAt     DateTime  @default(now()) @map("created_at")
+  completedAt   DateTime? @map("completed_at")
+  
+  model         Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  
+  @@unique([modelId, version])
+  @@index([modelId])
+  @@map("model_versions")
+}
+
+model Payment {
+  id            String    @id @default(cuid())
+  email         String
+  amount        Int       // Amount in cents
+  currency      String    @default("eur")
+  stripePaymentId String? @unique @map("stripe_payment_id")
+  status        String    @default("pending") // pending, completed, failed
+  createdAt     DateTime  @default(now()) @map("created_at")
+  
+  @@index([email])
+  @@map("payments")
+}

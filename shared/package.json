@@ -1,0 +1,17 @@
+{
+  "name": "@frametrain/shared",
+  "version": "1.0.0",
+  "description": "Shared types and utilities for FrameTrain",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "dependencies": {
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

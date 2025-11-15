@@ -1,0 +1,64 @@
+# Proprietary License
+
+Copyright (c) 2024 FrameTrain Team. All Rights Reserved.
+
+## Grant of License
+
+This software and associated documentation files (the "Software") are proprietary
+and confidential to FrameTrain Team ("Licensor").
+
+By accessing this repository or downloading the Software, you agree to the
+following terms:
+
+### Permissions
+
+1. **View Source Code**: You may view the source code for learning and 
+   evaluation purposes only.
+
+2. **Personal Use**: You may use compiled versions of the Software for personal,
+   non-commercial purposes with a valid license key obtained from 
+   https://frametrain.ai
+
+3. **Bug Reports**: You may submit bug reports and feature requests via GitHub
+   Issues.
+
+### Restrictions
+
+You may NOT, without express written permission from Licensor:
+
+❌ Copy, modify, merge, or distribute the source code  
+❌ Use the Software for commercial purposes without a valid license  
+❌ Create derivative works based on the Software  
+❌ Reverse engineer, decompile, or disassemble the compiled Software  
+❌ Remove or alter any copyright notices or license information  
+❌ Sublicense, sell, or transfer rights to the Software  
+
+### License Purchase
+
+Commercial use requires purchasing a license at https://frametrain.ai
+
+Valid license keys grant you the right to:
+- ✅ Download and use the compiled Software
+- ✅ Receive updates and support
+- ✅ Use the Software for commercial ML training projects
+
+### Termination
+
+This license automatically terminates if you violate any of these restrictions.
+Upon termination, you must destroy all copies of the Software.
+
+### Disclaimer
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+### Contact
+
+For licensing inquiries: licensing@frametrain.ai  
+For support: support@frametrain.ai  
+Website: https://frametrain.ai
