@@ -24,11 +24,11 @@ Registrierung → Auto-Login → Payment-Seite → Stripe Checkout → Success/C
 
 ### Environment Variables (bereits konfiguriert):
 ```bash
-STRIPE_SECRET_KEY="sk_test_..."
-STRIPE_PUBLISHABLE_KEY="pk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
-STRIPE_PRICE_ID="price_1STjOtEC9c8leIGWTwiUdGiK"
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_..."
+STRIPE_SECRET_KEY="sk_test_XXXXXXXX..."
+STRIPE_PUBLISHABLE_KEY="pk_test_XXXXXXXX..."
+STRIPE_WEBHOOK_SECRET="whsec_XXXXXXXX..."
+STRIPE_PRICE_ID="price_XXXXXXXX..."
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY="pk_test_XXXXXXXX..."
 ```
 
 ### Stripe Dashboard Setup:
@@ -69,7 +69,7 @@ stripe listen --forward-to localhost:5001/api/payment/webhook
 
 Das gibt dir einen Webhook-Secret wie:
 ```
-whsec_xxxxx
+whsec_XXXXXXXX...
 ```
 
 Füge diesen in `.env.local` als `STRIPE_WEBHOOK_SECRET` ein.
@@ -136,9 +136,9 @@ https://your-domain.com/api/payment/webhook
 
 ### 2. Live-Keys verwenden:
 ```bash
-STRIPE_SECRET_KEY="sk_live_..."
-STRIPE_PUBLISHABLE_KEY="pk_live_..."
-STRIPE_PRICE_ID="price_xxx" # Live Price ID
+STRIPE_SECRET_KEY="sk_live_XXXXXXXX..."
+STRIPE_PUBLISHABLE_KEY="pk_live_XXXXXXXX..."
+STRIPE_PRICE_ID="price_XXXXXXXX..." # Live Price ID
 ```
 
 ### 3. Webhook neu einrichten:

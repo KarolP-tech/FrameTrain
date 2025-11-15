@@ -5,9 +5,9 @@
   <p>Train ML models locally with full control over your data</p>
   
   [![License](https://img.shields.io/badge/License-BSL%201.1-blue.svg)](LICENSE)
-  [![Build](https://github.com/YourUsername/FrameTrain/actions/workflows/build-desktop.yml/badge.svg)](https://github.com/YourUsername/FrameTrain/actions)
+  [![Build](https://github.com/KarolP-tech/FrameTrain/actions/workflows/build-desktop.yml/badge.svg)](https://github.com/KarolP-tech/FrameTrain/actions)
   [![Website](https://img.shields.io/badge/Website-frametrain.ai-purple)](https://frametrain.ai)
-  [![Downloads](https://img.shields.io/github/downloads/YourUsername/FrameTrain/total)](https://github.com/YourUsername/FrameTrain/releases)
+  [![Downloads](https://img.shields.io/github/downloads/KarolP-tech/FrameTrain/total)](https://github.com/KarolP-tech/FrameTrain/releases)
 </div>
 
 ---
@@ -191,8 +191,8 @@ frametrain --help
 
 ```bash
 # Repository klonen
-git clone https://github.com/yourusername/frametrain.git
-cd frametrain
+git clone https://github.com/KarolP-tech/FrameTrain.git
+cd FrameTrain
 
 # Setup ausführen
 ./setup.sh  # oder setup.bat auf Windows
@@ -252,9 +252,9 @@ Beispiel `.env.local` für Website:
 ```bash
 DATABASE_URL="postgresql://user:pass@localhost:5432/frametrain"
 JWT_SECRET="your-super-secret-jwt-key"
-STRIPE_SECRET_KEY="sk_test_..."
-STRIPE_PUBLISHABLE_KEY="pk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
+STRIPE_SECRET_KEY="sk_test_XXXXXXXX..."
+STRIPE_PUBLISHABLE_KEY="pk_test_XXXXXXXX..."
+STRIPE_WEBHOOK_SECRET="whsec_XXXXXXXX..."
 NEXT_PUBLIC_API_URL="http://localhost:5001"
 APP_DOWNLOAD_BASE_URL="https://downloads.frametrain.ai"
 ```

@@ -19,13 +19,13 @@
 
    **Publishable Key** (beginnt mit `pk_test_...`)
    ```
-   Beispiel: pk_test_51234567890abcdefghijklmnop
+   Beispiel: pk_test_XXXXXXXXXXXXXXXXXXXXXXXXXX
    ```
    → Wird im Frontend verwendet (öffentlich)
 
    **Secret Key** (beginnt mit `sk_test_...`)
    ```
-   Beispiel: sk_test_51234567890abcdefghijklmnop
+   Beispiel: sk_test_XXXXXXXXXXXXXXXXXXXXXXXXXX
    ```
    → Wird im Backend verwendet (geheim!)
 
@@ -42,7 +42,7 @@
 5. Klicke "Add endpoint"
 6. Kopiere den **Webhook Signing Secret** (beginnt mit `whsec_...`)
    ```
-   Beispiel: whsec_1234567890abcdefghijklmnop
+   Beispiel: whsec_XXXXXXXXXXXXXXXXXXXXXXXXXX
    ```
 
 ---
@@ -142,11 +142,11 @@ JWT_SECRET="Kx9mP2nQ5rT8vW1yZ4aC6dF7gH0jK3lM5nP8qR1sT4u"
 # STRIPE (Payment)
 # ============================================
 # Von https://dashboard.stripe.com/test/apikeys
-STRIPE_SECRET_KEY="sk_test_51234567890abcdefghijklmnop"
-STRIPE_PUBLISHABLE_KEY="pk_test_51234567890abcdefghijklmnop"
+STRIPE_SECRET_KEY="sk_test_XXXXXXXX..."
+STRIPE_PUBLISHABLE_KEY="pk_test_XXXXXXXX..."
 
 # Von https://dashboard.stripe.com/test/webhooks
-STRIPE_WEBHOOK_SECRET="whsec_1234567890abcdefghijklmnop"
+STRIPE_WEBHOOK_SECRET="whsec_XXXXXXXX..."
 
 # ============================================
 # API CONFIGURATION

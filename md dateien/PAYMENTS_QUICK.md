@@ -8,9 +8,9 @@ Du brauchst **3 Dinge**:
 - **Website:** https://stripe.com
 - **Kostenlos:** Account erstellen
 - **Was du brauchst:**
-  - Publishable Key (`pk_test_...`)
-  - Secret Key (`sk_test_...`)  
-  - Webhook Secret (`whsec_...`)
+  - Publishable Key (`pk_test_XXXXXXXX...`)
+  - Secret Key (`sk_test_XXXXXXXX...`)  
+  - Webhook Secret (`whsec_XXXXXXXX...`)
 
 ### 2. Datenbank (User & Payments speichern) 🗄️
 - **Option A:** PostgreSQL lokal (kostenlos)
@@ -77,9 +77,9 @@ Beantworte die Fragen:
    ```bash
    DATABASE_URL="deine-db-url"
    JWT_SECRET="dein-jwt-secret"
-   STRIPE_SECRET_KEY="sk_test_..."
-   STRIPE_PUBLISHABLE_KEY="pk_test_..."
-   STRIPE_WEBHOOK_SECRET="whsec_..."
+   STRIPE_SECRET_KEY="sk_test_XXXXXXXX..."
+   STRIPE_PUBLISHABLE_KEY="pk_test_XXXXXXXX..."
+   STRIPE_WEBHOOK_SECRET="whsec_XXXXXXXX..."
    ```
 
 ---

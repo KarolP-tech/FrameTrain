@@ -96,9 +96,9 @@ DATABASE_URL="file:./dev.db"
 JWT_SECRET="dein-geheimer-jwt-key"
 
 # Stripe
-STRIPE_SECRET_KEY="sk_test_..."
-STRIPE_PUBLISHABLE_KEY="pk_test_..."
-STRIPE_WEBHOOK_SECRET="whsec_..."
+STRIPE_SECRET_KEY="sk_test_XXXXXXXX..."
+STRIPE_PUBLISHABLE_KEY="pk_test_XXXXXXXX..."
+STRIPE_WEBHOOK_SECRET="whsec_XXXXXXXX..."
 
 # API
 API_URL="http://localhost:5001"
