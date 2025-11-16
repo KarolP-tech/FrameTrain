@@ -5,7 +5,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -13,11 +13,13 @@ model User {
   id            String    @id @default(cuid())
   email         String    @unique
   passwordHash  String    @map("password_hash")
+  hasPaid       Boolean   @default(false) @map("has_paid")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
   
   apiKeys       ApiKey[]
   models        Model[]
+  payments      Payment[]
   
   @@map("users")
 }
@@ -26,7 +28,7 @@ model ApiKey {
   id            String    @id @default(cuid())
   userId        String    @map("user_id")
   key           String    @unique
-  isValid       Boolean   @default(true) @map("is_valid")
+  isActive      Boolean   @default(true) @map("is_active")
   expiresAt     DateTime? @map("expires_at")
   createdAt     DateTime  @default(now()) @map("created_at")
   lastUsedAt    DateTime? @map("last_used_at")
@@ -72,14 +74,20 @@ model ModelVersion {
 }
 
 model Payment {
-  id            String    @id @default(cuid())
-  email         String
-  amount        Int       // Amount in cents
-  currency      String    @default("eur")
-  stripePaymentId String? @unique @map("stripe_payment_id")
-  status        String    @default("pending") // pending, completed, failed
-  createdAt     DateTime  @default(now()) @map("created_at")
+  id              String    @id @default(cuid())
+  userId          String?   @map("user_id")
+  email           String
+  amount          Int       // Amount in cents
+  currency        String    @default("eur")
+  stripePaymentId String?   @unique @map("stripe_payment_id")
+  stripeSessionId String?   @unique @map("stripe_session_id")
+  status          String    @default("pending") // pending, completed, failed, refunded
+  createdAt       DateTime  @default(now()) @map("created_at")
+  completedAt     DateTime? @map("completed_at")
+  
+  user            User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
   
   @@index([email])
+  @@index([userId])
   @@map("payments")
 }
