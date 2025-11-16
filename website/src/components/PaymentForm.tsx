@@ -1,9 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { loadStripe } from '@stripe/stripe-js';
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 interface PaymentFormProps {
   email: string;
@@ -25,30 +22,24 @@ export function PaymentForm({ email, onSuccess }: PaymentFormProps) {
         body: JSON.stringify({ email }),
       });
 
-      const { sessionId, error: apiError } = await response.json();
+      const data = await response.json();
 
-      if (apiError) {
-        setError(apiError);
+      if (!response.ok || data.error) {
+        setError(data.error || 'Fehler beim Erstellen der Checkout-Session');
+        setLoading(false);
         return;
       }
 
-      const stripe = await stripePromise;
-      if (!stripe) {
-        setError('Stripe konnte nicht geladen werden');
-        return;
-      }
-
-      const { error: stripeError } = await stripe.redirectToCheckout({
-        sessionId: sessionId
-      });
-
-
-      if (stripeError) {
-        setError(stripeError.message || 'Zahlung fehlgeschlagen');
+      // Redirect to Stripe Checkout
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError('Keine Checkout-URL erhalten');
+        setLoading(false);
       }
     } catch (err) {
+      console.error('Payment error:', err);
       setError('Ein Fehler ist aufgetreten. Bitte versuche es erneut.');
-    } finally {
       setLoading(false);
     }
   };
