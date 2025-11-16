@@ -3,6 +3,9 @@ import bcrypt from 'bcryptjs'
 import { prisma } from '@/lib/prisma'
 import { signToken, setAuthCookie } from '@/lib/auth'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()

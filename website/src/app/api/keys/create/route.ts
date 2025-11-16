@@ -3,6 +3,9 @@ import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
 import { generateApiKey, hashApiKey } from '@/lib/api-key'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 export async function POST(req: NextRequest) {
   try {
     // Check authentication

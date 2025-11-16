@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { verifyJWT } from '@/lib/jwt';
 
+// Force dynamic rendering for this route
+export const dynamic = 'force-dynamic';
+
 // GitHub Repository Info
 const GITHUB_OWNER = process.env.GITHUB_OWNER || 'YourUsername';
 const GITHUB_REPO = process.env.GITHUB_REPO || 'FrameTrain';
