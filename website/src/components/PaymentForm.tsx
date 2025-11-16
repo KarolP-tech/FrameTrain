@@ -38,7 +38,9 @@ export function PaymentForm({ email, onSuccess }: PaymentFormProps) {
         return;
       }
 
-      const { error: stripeError } = await stripe.redirectToCheckout({ sessionId });
+      const { error: stripeError } = await stripe.redirectToCheckout({
+  sessionId: sessionId, // oder einfach sessionId, wenn gleiche Variable
+});
 
       if (stripeError) {
         setError(stripeError.message || 'Zahlung fehlgeschlagen');
