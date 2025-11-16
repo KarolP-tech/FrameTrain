@@ -3,7 +3,7 @@ import Stripe from 'stripe'
 import { getCurrentUser } from '@/lib/auth'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20.acacia',
+  apiVersion: '2024-11-20' as unknown as Stripe.StripeConfig['apiVersion'],
 })
 
 export async function POST(req: NextRequest) {
