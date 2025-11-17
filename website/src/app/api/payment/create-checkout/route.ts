@@ -24,6 +24,13 @@ export async function POST(req: NextRequest) {
 
     const priceId = process.env.STRIPE_PRICE_ID!
     
+    // Get the base URL from the request or environment variable
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 
+                    `${req.nextUrl.protocol}//${req.nextUrl.host}`
+    
+    // Ensure the URL has a proper schema
+    const fullBaseUrl = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`
+    
     // Erstelle Stripe Checkout Session
     const session = await stripe.checkout.sessions.create({
       customer_email: user.email,
@@ -35,8 +42,8 @@ export async function POST(req: NextRequest) {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.NEXT_PUBLIC_API_URL}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${process.env.NEXT_PUBLIC_API_URL}/payment/cancel`,
+      success_url: `${fullBaseUrl}/payment/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${fullBaseUrl}/payment/cancel`,
       metadata: {
         userId: user.userId,
         email: user.email,
