@@ -1,11 +1,8 @@
 // Authentifizierungs-Modul für Supabase Integration
 
 use serde::{Deserialize, Serialize};
-use reqwest;
 use bcrypt;
-
-// Supabase Connection String mit URL-encoded Password
-const SUPABASE_URL: &str = "postgresql://postgres.pmilxbuzfghbphjjaiar:gD7eT4iP9%22i%3A~%24%5E@aws-1-eu-west-1.pooler.supabase.com:6543/postgres?pgbouncer=true&connection_limit=1";
+use std::env;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiKeyValidation {
@@ -30,6 +27,15 @@ struct DbUser {
     has_paid: bool,
 }
 
+/// Holt die Supabase Connection String aus Environment Variable
+fn get_database_url() -> Result<String, String> {
+    // Bei Development: Aus .env laden
+    // Bei Production Build: Wird beim Kompilieren eingebettet via --env flag
+    env::var("SUPABASE_URL")
+        .or_else(|_| env::var("DATABASE_URL"))
+        .map_err(|_| "SUPABASE_URL environment variable not set".to_string())
+}
+
 /// Validiert API-Key und Password gegen Supabase-Datenbank
 #[tauri::command]
 pub async fn validate_credentials(api_key: String, password: String) -> Result<ApiKeyValidation, String> {
@@ -38,24 +44,27 @@ pub async fn validate_credentials(api_key: String, password: String) -> Result<A
         return Err("Ungültiges API-Key Format".to_string());
     }
 
-    // 2. Verbindung zur Datenbank aufbauen
-    let client = create_db_client().await
+    // 2. Hole Database URL
+    let database_url = get_database_url()?;
+
+    // 3. Verbindung zur Datenbank aufbauen
+    let client = create_db_client(&database_url).await
         .map_err(|e| format!("Datenbankverbindung fehlgeschlagen: {}", e))?;
 
-    // 3. API-Key aus Datenbank abrufen
+    // 4. API-Key aus Datenbank abrufen
     let api_key_record = fetch_api_key(&client, &api_key).await
         .map_err(|e| format!("API-Key nicht gefunden: {}", e))?;
 
-    // 4. Prüfe ob Key aktiv ist
+    // 5. Prüfe ob Key aktiv ist
     if !api_key_record.is_active {
         return Err("API-Key ist deaktiviert".to_string());
     }
 
-    // 5. User-Daten abrufen
+    // 6. User-Daten abrufen
     let user = fetch_user(&client, &api_key_record.user_id).await
         .map_err(|e| format!("Benutzer nicht gefunden: {}", e))?;
 
-    // 6. Password validieren
+    // 7. Password validieren
     let password_valid = bcrypt::verify(&password, &user.password_hash)
         .map_err(|e| format!("Password-Validierung fehlgeschlagen: {}", e))?;
 
@@ -63,15 +72,15 @@ pub async fn validate_credentials(api_key: String, password: String) -> Result<A
         return Err("Falsches Passwort".to_string());
     }
 
-    // 7. Prüfe ob User bezahlt hat
+    // 8. Prüfe ob User bezahlt hat
     if !user.has_paid {
-        return Err("Account ist nicht aktiv. Bitte schließe ein Abonnement ab.".to_string());
+        return Err("Account ist nicht aktiv. Bitte schließe eine Lizenz ab.".to_string());
     }
 
-    // 8. Update last_used_at
+    // 9. Update last_used_at
     update_api_key_usage(&client, &api_key_record.id).await.ok();
 
-    // 9. Erfolgreiche Validierung
+    // 10. Erfolgreiche Validierung
     Ok(ApiKeyValidation {
         user_id: user.id,
         email: user.email,
@@ -80,8 +89,8 @@ pub async fn validate_credentials(api_key: String, password: String) -> Result<A
 }
 
 /// Erstellt einen Datenbank-Client
-async fn create_db_client() -> Result<tokio_postgres::Client, tokio_postgres::Error> {
-    let (client, connection) = tokio_postgres::connect(SUPABASE_URL, tokio_postgres::NoTls).await?;
+async fn create_db_client(database_url: &str) -> Result<tokio_postgres::Client, tokio_postgres::Error> {
+    let (client, connection) = tokio_postgres::connect(database_url, tokio_postgres::NoTls).await?;
 
     // Spawn connection handler
     tokio::spawn(async move {

@@ -46,6 +46,7 @@ jobs:
         run: npm run tauri:build
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
 
       - name: Upload artifacts (Windows)
         if: matrix.platform == 'windows-latest'
