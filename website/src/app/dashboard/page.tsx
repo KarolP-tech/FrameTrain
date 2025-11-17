@@ -12,7 +12,7 @@ interface ApiKey {
   key: string
   createdAt: string
   lastUsedAt: string | null
-  isValid: boolean
+  isActive: boolean
 }
 
 export default function DashboardPage() {
@@ -48,7 +48,7 @@ export default function DashboardPage() {
         key: 'ft_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15),
         createdAt: new Date().toISOString(),
         lastUsedAt: null,
-        isValid: true,
+        isActive: true,
       }
       
       setApiKeys([mockApiKey])
@@ -136,8 +136,8 @@ export default function DashboardPage() {
                           {apiKey.lastUsedAt && (
                             <span>Zuletzt genutzt: {new Date(apiKey.lastUsedAt).toLocaleDateString('de-DE')}</span>
                           )}
-                          <span className={`flex items-center gap-1 ${apiKey.isValid ? 'text-green-400' : 'text-red-400'}`}>
-                            {apiKey.isValid ? (
+                          <span className={`flex items-center gap-1 ${apiKey.isActive ? 'text-green-400' : 'text-red-400'}`}>
+                            {apiKey.isActive ? (
                               <>
                                 <Check className="w-4 h-4" />
                                 <span>Aktiv</span>

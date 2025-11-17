@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
     const existingKey = await prisma.apiKey.findFirst({
       where: {
         userId: currentUser.userId,
-        isValid: true,
+        isActive: true,
       },
     })
 
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       data: {
         userId: currentUser.userId,
         key: hashedKey,
-        isValid: true,
+        isActive: true,
       },
     })
 

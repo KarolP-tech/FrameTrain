@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    if (!apiKey || !apiKey.isValid) {
+    if (!apiKey || !apiKey.isActive) {
       return NextResponse.json(
         { error: 'Ungültiger oder abgelaufener Key', valid: false },
         { status: 401 }
