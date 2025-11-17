@@ -1,4 +1,4 @@
-import React from 'react';
+
 import { GitBranch, Calendar, Settings } from 'lucide-react';
 
 interface VersionManagerProps {

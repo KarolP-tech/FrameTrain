@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import Sidebar from './Sidebar';
 import ModelManager from './ModelManager';
 import TrainingPanel from './TrainingPanel';

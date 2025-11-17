@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Upload, FileText, CheckCircle, XCircle } from 'lucide-react';
-import { open } from '@tauri-apps/api/dialog';
-import { readTextFile } from '@tauri-apps/api/fs';
+import { open } from '@tauri-apps/plugin-dialog';
+import { readTextFile } from '@tauri-apps/plugin-fs';
 
 export default function DatasetUpload() {
   const [dataset, setDataset] = useState<any>(null);
