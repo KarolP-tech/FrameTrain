@@ -5,8 +5,10 @@ import { getCurrentUser } from '@/lib/auth'
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
+// @ts-ignore - Stripe API version compatibility
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20' as unknown as Stripe.StripeConfig['apiVersion'],
+  // @ts-ignore
+  apiVersion: '2024-06-20',
 })
 
 export async function POST(req: NextRequest) {

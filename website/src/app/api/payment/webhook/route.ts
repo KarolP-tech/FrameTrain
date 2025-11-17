@@ -5,8 +5,10 @@ import { prisma } from '@/lib/prisma'
 // Force dynamic rendering
 export const dynamic = 'force-dynamic'
 
+// @ts-ignore - Stripe API version compatibility
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2024-11-20' as unknown as Stripe.StripeConfig['apiVersion'],
+  // @ts-ignore
+  apiVersion: '2024-06-20',
 })
 
 export async function POST(req: NextRequest) {
@@ -34,29 +36,63 @@ export async function POST(req: NextRequest) {
     case 'checkout.session.completed':
       const session = event.data.object as Stripe.Checkout.Session
 
-      // Speichere Payment in Datenbank
-      await prisma.payment.create({
-        data: {
-          email: session.customer_email!,
-          amount: session.amount_total!,
-          currency: session.currency!,
-          stripePaymentId: session.id,
-          status: 'completed',
-        },
-      })
+      try {
+        // Find user by email
+        const user = await prisma.user.findUnique({
+          where: { email: session.customer_email! },
+        })
 
-      // Hier könntest du auch einen API-Key generieren
-      // und dem User per E-Mail zusenden
+        if (user) {
+          // Update user: mark as paid
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { 
+              hasPaid: true,
+              updatedAt: new Date(),
+            },
+          })
 
-      console.log('Payment completed for:', session.customer_email)
+          // Create payment record
+          await prisma.payment.create({
+            data: {
+              userId: user.id,
+              email: session.customer_email!,
+              amount: session.amount_total!,
+              currency: session.currency!,
+              stripePaymentId: session.payment_intent as string || session.id,
+              stripeSessionId: session.id,
+              status: 'completed',
+              completedAt: new Date(),
+            },
+          })
+
+          // Generate API Key
+          const apiKeyString = `ft_${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}${Math.random().toString(36).substring(2, 15)}`
+          
+          await prisma.apiKey.create({
+            data: {
+              userId: user.id,
+              key: apiKeyString,
+              isActive: true,
+              createdAt: new Date(),
+            },
+          })
+
+          console.log('✅ Payment completed & API Key created for:', session.customer_email)
+        } else {
+          console.error('❌ User not found for email:', session.customer_email)
+        }
+      } catch (dbError) {
+        console.error('❌ Database error in webhook:', dbError)
+      }
       break
 
     case 'checkout.session.expired':
-      console.log('Checkout session expired:', event.data.object.id)
+      console.log('⚠️ Checkout session expired:', event.data.object.id)
       break
 
     default:
-      console.log(`Unhandled event type ${event.type}`)
+      console.log(`ℹ️ Unhandled event type ${event.type}`)
   }
 
   return NextResponse.json({ received: true })
