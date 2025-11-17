@@ -4,6 +4,7 @@
 mod ml_backend;
 mod database;
 mod db_commands;
+mod auth;
 
 use std::fs;
 use std::sync::Mutex;
@@ -25,7 +26,7 @@ fn verify_api_key(api_key: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn save_config(app_handle: tauri::AppHandle, api_key: String) -> Result<(), String> {
+fn save_config(app_handle: tauri::AppHandle, api_key: String, config: String) -> Result<(), String> {
     let config_dir = app_handle
         .path()
         .app_config_dir()
@@ -35,9 +36,8 @@ fn save_config(app_handle: tauri::AppHandle, api_key: String) -> Result<(), Stri
         .map_err(|e| format!("Konnte Config-Verzeichnis nicht erstellen: {}", e))?;
 
     let config_path = config_dir.join("config.json");
-    let config = serde_json::json!({ "api_key": api_key });
 
-    fs::write(config_path, config.to_string())
+    fs::write(config_path, config)
         .map_err(|e| format!("Konnte Config nicht speichern: {}", e))?;
 
     Ok(())
@@ -77,6 +77,23 @@ fn get_app_data_dir(app_handle: tauri::AppHandle) -> Result<String, String> {
         .map(|p| p.to_string_lossy().to_string())
 }
 
+#[tauri::command]
+fn clear_config(app_handle: tauri::AppHandle) -> Result<(), String> {
+    let config_dir = app_handle
+        .path()
+        .app_config_dir()
+        .map_err(|e| format!("Konnte Config-Verzeichnis nicht finden: {}", e))?;
+
+    let config_path = config_dir.join("config.json");
+
+    if config_path.exists() {
+        fs::remove_file(config_path)
+            .map_err(|e| format!("Konnte Config nicht l\u{00f6}schen: {}", e))?;
+    }
+
+    Ok(())
+}
+
 fn main() {
     // Datenbank vorbereiten
     let db_path = get_database_path();
@@ -102,6 +119,8 @@ fn main() {
             save_config,
             load_config,
             get_app_data_dir,
+            clear_config,
+            auth::validate_credentials,
             ml_backend::start_training,
             ml_backend::get_training_progress,
             ml_backend::stop_training,

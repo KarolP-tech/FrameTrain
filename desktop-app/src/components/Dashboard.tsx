@@ -5,15 +5,23 @@ import TrainingPanel from './TrainingPanel';
 import DatasetUpload from './DatasetUpload';
 import AnalysisPanel from './AnalysisPanel';
 import VersionManager from './VersionManager';
+import Settings from './Settings';
+
+interface UserData {
+  apiKey: string;
+  password: string;
+  userId: string;
+  email: string;
+}
 
 interface DashboardProps {
-  apiKey: string;
+  userData: UserData;
   onLogout: () => void;
 }
 
-type View = 'models' | 'training' | 'dataset' | 'analysis' | 'versions';
+type View = 'models' | 'training' | 'dataset' | 'analysis' | 'versions' | 'settings';
 
-export default function Dashboard({ apiKey, onLogout }: DashboardProps) {
+export default function Dashboard({ userData, onLogout }: DashboardProps) {
   const [currentView, setCurrentView] = useState<View>('models');
   const [selectedModel, setSelectedModel] = useState<any>(null);
 
@@ -29,6 +37,8 @@ export default function Dashboard({ apiKey, onLogout }: DashboardProps) {
         return <AnalysisPanel />;
       case 'versions':
         return <VersionManager selectedModel={selectedModel} />;
+      case 'settings':
+        return <Settings userData={userData} onLogout={onLogout} />;
       default:
         return <ModelManager onSelectModel={setSelectedModel} />;
     }
@@ -39,6 +49,7 @@ export default function Dashboard({ apiKey, onLogout }: DashboardProps) {
       <Sidebar 
         currentView={currentView} 
         onViewChange={setCurrentView}
+        userEmail={userData.email}
         onLogout={onLogout}
       />
       
