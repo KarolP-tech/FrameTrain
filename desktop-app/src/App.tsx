@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import Dashboard from './components/Dashboard';
 import Login from './components/Login';
+import GlobalTrainingProgress from './components/GlobalTrainingProgress';
 import './App.css';
 
 interface ApiKeyValidation {
@@ -146,10 +147,13 @@ function App() {
   return (
     <div className="app">
       {isAuthenticated && userData ? (
-        <Dashboard 
-          userData={userData}
-          onLogout={handleLogout} 
-        />
+        <>
+          <Dashboard 
+            userData={userData}
+            onLogout={handleLogout} 
+          />
+          <GlobalTrainingProgress />
+        </>
       ) : (
         <Login onLogin={handleLogin} />
       )}

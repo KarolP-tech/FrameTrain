@@ -5,6 +5,10 @@ mod ml_backend;
 mod database;
 mod db_commands;
 mod auth;
+mod model_import;
+mod dataset_manager;
+mod training_manager;
+mod config_validation;
 
 use std::fs;
 use std::sync::Mutex;
@@ -26,7 +30,7 @@ fn verify_api_key(api_key: String) -> Result<bool, String> {
 }
 
 #[tauri::command]
-fn save_config(app_handle: tauri::AppHandle, api_key: String, config: String) -> Result<(), String> {
+fn save_config(app_handle: tauri::AppHandle, _api_key: String, config: String) -> Result<(), String> {
     let config_dir = app_handle
         .path()
         .app_config_dir()
@@ -56,16 +60,8 @@ fn load_config(app_handle: tauri::AppHandle) -> Result<String, String> {
         return Err("Keine Konfiguration gefunden".to_string());
     }
 
-    let config_str = fs::read_to_string(config_path)
-        .map_err(|e| format!("Konnte Config nicht lesen: {}", e))?;
-
-    let config: serde_json::Value =
-        serde_json::from_str(&config_str).map_err(|e| format!("Ungültige Config: {}", e))?;
-
-    config["api_key"]
-        .as_str()
-        .ok_or("API-Key nicht gefunden".to_string())
-        .map(|s| s.to_string())
+    fs::read_to_string(config_path)
+        .map_err(|e| format!("Konnte Config nicht lesen: {}", e))
 }
 
 #[tauri::command]
@@ -88,13 +84,25 @@ fn clear_config(app_handle: tauri::AppHandle) -> Result<(), String> {
 
     if config_path.exists() {
         fs::remove_file(config_path)
-            .map_err(|e| format!("Konnte Config nicht l\u{00f6}schen: {}", e))?;
+            .map_err(|e| format!("Konnte Config nicht löschen: {}", e))?;
     }
 
     Ok(())
 }
 
 fn main() {
+    dotenvy::dotenv().ok();
+    // Load .env file if in development
+    #[cfg(debug_assertions)]
+    {
+        if let Err(e) = dotenvy::dotenv() {
+            eprintln!("⚠️  Warning: Could not load .env file: {}", e);
+            eprintln!("    Make sure SUPABASE_URL environment variable is set!");
+        } else {
+            println!("✅ .env file loaded successfully");
+        }
+    }
+
     // Datenbank vorbereiten
     let db_path = get_database_path();
 
@@ -114,6 +122,7 @@ fn main() {
         .plugin(tauri_plugin_os::init())
         .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(tauri::generate_handler![
             verify_api_key,
             save_config,
@@ -132,7 +141,28 @@ fn main() {
             db_commands::db_get_model,
             db_commands::db_delete_model,
             db_commands::db_list_datasets,
-            db_commands::db_save_dataset
+            db_commands::db_save_dataset,
+            model_import::select_model_folder,
+            model_import::validate_model_folder,
+            model_import::import_model,
+            dataset_manager::select_dataset_path,
+            dataset_manager::validate_dataset_path,
+            dataset_manager::import_dataset,
+            dataset_manager::list_datasets_for_model,
+            dataset_manager::auto_split_dataset,
+            dataset_manager::toggle_hard_example,
+            dataset_manager::update_dataset_status,
+            dataset_manager::delete_dataset,
+            training_manager::start_training_session,
+            training_manager::get_training_status,
+            training_manager::pause_training,
+            training_manager::resume_training,
+            training_manager::stop_training_session,
+            training_manager::list_checkpoints,
+            training_manager::list_model_trainings,
+            training_manager::get_training_logs,
+            training_manager::list_active_trainings,
+            config_validation::validate_training_config
         ])
         .run(context)
         .expect("Fehler beim Starten der Tauri-Anwendung");

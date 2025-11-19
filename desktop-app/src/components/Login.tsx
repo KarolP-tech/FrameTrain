@@ -11,10 +11,12 @@ export default function Login({ onLogin }: LoginProps) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [debugInfo, setDebugInfo] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setDebugInfo('');
     setLoading(true);
 
     try {
@@ -31,9 +33,35 @@ export default function Login({ onLogin }: LoginProps) {
         throw new Error('Passwort muss mindestens 6 Zeichen lang sein');
       }
 
+      console.log('🔐 Attempting login...');
+      console.log('API Key length:', apiKey.length);
+      console.log('Password length:', password.length);
+
       await onLogin(apiKey, password);
+      
+      console.log('✅ Login successful!');
     } catch (err: any) {
-      setError(err.message || 'Login fehlgeschlagen');
+      console.error('❌ Login error:', err);
+      
+      let errorMessage = err.message || 'Login fehlgeschlagen';
+      let debugMessage = '';
+
+      // Detaillierte Error-Informationen
+      if (typeof err === 'string') {
+        errorMessage = err;
+      } else if (err.message) {
+        errorMessage = err.message;
+        debugMessage = `Type: ${typeof err}, Full: ${JSON.stringify(err)}`;
+      }
+
+      setError(errorMessage);
+      setDebugInfo(debugMessage);
+      
+      console.log('Error details:', {
+        message: errorMessage,
+        type: typeof err,
+        full: err
+      });
     } finally {
       setLoading(false);
     }
@@ -120,9 +148,16 @@ export default function Login({ onLogin }: LoginProps) {
 
             {/* Error Message */}
             {error && (
-              <div className="flex items-start space-x-2 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
-                <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-300">{error}</p>
+              <div className="space-y-2">
+                <div className="flex items-start space-x-2 p-4 bg-red-500/10 border border-red-500/20 rounded-lg">
+                  <AlertCircle className="w-5 h-5 text-red-400 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="text-sm font-medium text-red-300">{error}</p>
+                    {debugInfo && (
+                      <p className="text-xs text-red-400 mt-1 font-mono">{debugInfo}</p>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -176,6 +211,7 @@ export default function Login({ onLogin }: LoginProps) {
               </a>
             </p>
           </div>
+
         </div>
 
         {/* Footer */}

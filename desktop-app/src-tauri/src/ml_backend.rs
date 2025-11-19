@@ -72,7 +72,7 @@ pub async fn get_training_progress(training_id: String) -> Result<TrainingProgre
 
 // Stoppt Training
 #[tauri::command]
-pub async fn stop_training(training_id: String) -> Result<String, String> {
+pub async fn stop_training(_training_id: String) -> Result<String, String> {
     // Signal an Python-Prozess senden
     // TODO: Implementierung mit Process-Management
     Ok("Training gestoppt".to_string())

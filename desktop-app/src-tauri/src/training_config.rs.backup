@@ -1,0 +1,286 @@
+// Training Configuration Validation für FrameTrain Desktop App
+
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct TrainingConfig {
+    // Basic Training Parameters
+    pub learning_rate: f64,
+    pub batch_size: u32,
+    pub eval_batch_size: Option<u32>,
+    pub epochs: u32,
+    pub optimizer: String,
+    
+    // Regularization
+    pub weight_decay: f64,
+    pub dropout: Option<f64>,
+    pub max_grad_norm: f64,
+    
+    // Learning Rate Scheduling
+    pub warmup_ratio: f64,
+    pub warmup_steps: Option<u32>,
+    pub lr_scheduler_type: String,
+    
+    // Training Strategy
+    pub gradient_accumulation_steps: u32,
+    pub fp16: bool,
+    pub bf16: bool,
+    
+    // Checkpointing
+    pub save_strategy: String,
+    pub save_steps: Option<u32>,
+    pub save_total_limit: u32,
+    
+    // Evaluation
+    pub eval_strategy: String,
+    pub eval_steps: Option<u32>,
+    pub metric_for_best_model: Option<String>,
+    pub load_best_model_at_end: bool,
+    
+    // Early Stopping
+    pub early_stopping_patience: Option<u32>,
+    pub early_stopping_threshold: Option<f64>,
+    
+    // Logging
+    pub logging_steps: u32,
+    pub logging_strategy: String,
+    
+    // Generation (for Seq2Seq)
+    pub predict_with_generate: bool,
+    pub generation_max_length: Option<u32>,
+    pub generation_num_beams: Option<u32>,
+    
+    // Advanced
+    pub dataloader_num_workers: u32,
+    pub group_by_length: bool,
+    pub label_smoothing_factor: f64,
+    pub seed: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ValidationIssue {
+    pub severity: String,  // "error", "warning", "info"
+    pub category: String,
+    pub message: String,
+    pub suggestion: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ConfigValidation {
+    pub is_valid: bool,
+    pub quality_level: String,  // "excellent", "good", "fair", "poor"
+    pub overall_score: f64,
+    pub warnings: Vec<String>,
+    pub recommendations: Vec<String>,
+    pub issues: Vec<ValidationIssue>,
+    pub estimated_training_time: String,
+    pub estimated_memory_usage: String,
+}
+
+#[tauri::command]
+pub async fn validate_training_config(
+    config: TrainingConfig,
+    total_samples: Option<u32>,
+) -> Result<ConfigValidation, String> {
+    let mut score = 100.0;
+    let mut warnings = Vec::new();
+    let mut recommendations = Vec::new();
+    let mut issues = Vec::new();
+    
+    let samples = total_samples.unwrap_or(10000);
+    let effective_batch_size = config.batch_size * config.gradient_accumulation_steps;
+    
+    // 1. Batch Size Validation
+    if config.batch_size < 2 {
+        score -= 20.0;
+        issues.push(ValidationIssue {
+            severity: "error".to_string(),
+            category: "batch_size".to_string(),
+            message: "Batch Size zu klein (< 2)".to_string(),
+            suggestion: "Erhöhe auf mindestens 2".to_string(),
+        });
+    } else if config.batch_size > 128 {
+        score -= 10.0;
+        warnings.push("⚠️ Batch Size sehr groß → Hoher Speicherbedarf".to_string());
+    } else if config.batch_size >= 8 && config.batch_size <= 32 {
+        recommendations.push("✅ Batch Size ist optimal".to_string());
+    }
+    
+    // 2. Learning Rate Validation
+    if config.learning_rate > 0.01 {
+        score -= 25.0;
+        issues.push(ValidationIssue {
+            severity: "warning".to_string(),
+            category: "learning_rate".to_string(),
+            message: "Learning Rate sehr hoch".to_string(),
+            suggestion: "Reduziere auf 2e-5 für Fine-Tuning".to_string(),
+        });
+    } else if config.learning_rate < 1e-6 {
+        score -= 15.0;
+        warnings.push("⚠️ Learning Rate sehr niedrig → Langsames Training".to_string());
+    } else if config.learning_rate >= 1e-5 && config.learning_rate <= 5e-5 {
+        recommendations.push("✅ Learning Rate ist optimal für Fine-Tuning".to_string());
+    }
+    
+    // 3. Epochs Validation
+    if config.epochs > 10 {
+        score -= 10.0;
+        warnings.push("⚠️ Viele Epochs → Overfitting-Risiko".to_string());
+        recommendations.push("💡 Nutze Early Stopping".to_string());
+    } else if config.epochs < 2 {
+        score -= 15.0;
+        warnings.push("⚠️ Sehr wenige Epochs → Untertraining".to_string());
+    } else if config.epochs >= 3 && config.epochs <= 5 {
+        recommendations.push("✅ Epochs-Anzahl ist gut gewählt".to_string());
+    }
+    
+    // 4. Warmup Validation
+    if config.warmup_ratio == 0.0 && config.warmup_steps.is_none() {
+        score -= 8.0;
+        recommendations.push("💡 Füge Warmup hinzu (z.B. warmup_ratio: 0.05)".to_string());
+    } else if config.warmup_ratio > 0.0 {
+        recommendations.push("✅ Warmup aktiviert → Stabileres Training".to_string());
+    }
+    
+    // 5. Weight Decay Validation
+    if config.weight_decay == 0.0 {
+        score -= 5.0;
+        recommendations.push("💡 Weight Decay hinzufügen (z.B. 0.01)".to_string());
+    } else if config.weight_decay >= 0.01 && config.weight_decay <= 0.1 {
+        recommendations.push("✅ Weight Decay ist gut gewählt".to_string());
+    }
+    
+    // 6. Gradient Clipping
+    if config.max_grad_norm == 0.0 {
+        score -= 5.0;
+        recommendations.push("💡 Gradient Clipping aktivieren (z.B. 1.0)".to_string());
+    } else if config.max_grad_norm == 1.0 {
+        recommendations.push("✅ Gradient Clipping optimal".to_string();
+    }
+    
+    // 7. Precision (FP16/BF16)
+    if !config.fp16 && !config.bf16 {
+        recommendations.push("💡 Mixed Precision (FP16/BF16) kann Training beschleunigen".to_string());
+    } else {
+        recommendations.push("✅ Mixed Precision aktiviert".to_string());
+    }
+    
+    // 8. Evaluation Strategy
+    if config.eval_strategy == "no" {
+        score -= 10.0;
+        warnings.push("⚠️ Keine Evaluation → Overfitting nicht erkennbar".to_string());
+        recommendations.push("💡 Setze eval_strategy auf 'epoch' oder 'steps'".to_string());
+    } else {
+        recommendations.push("✅ Evaluation aktiviert".to_string());
+    }
+    
+    // 9. Optimizer Validation
+    if config.optimizer.to_lowercase() != "adamw" {
+        score -= 8.0;
+        recommendations.push("💡 AdamW ist der beste Optimizer für Transformers".to_string());
+    } else {
+        recommendations.push("✅ AdamW ist die beste Wahl für Transformers".to_string());
+    }
+    
+    // 10. Early Stopping
+    if config.early_stopping_patience.is_some() {
+        recommendations.push("✅ Early Stopping aktiviert → Schutz vor Overfitting".to_string());
+    } else if config.epochs > 5 {
+        recommendations.push("💡 Early Stopping empfohlen bei vielen Epochs".to_string());
+    }
+    
+    // 11. Label Smoothing
+    if config.label_smoothing_factor > 0.0 {
+        recommendations.push("✅ Label Smoothing → Bessere Generalisierung".to_string());
+    }
+    
+    // Quality Level
+    let quality_level = if score >= 85.0 {
+        "excellent"
+    } else if score >= 70.0 {
+        "good"
+    } else if score >= 50.0 {
+        "fair"
+    } else {
+        "poor"
+    };
+    
+    // Allgemeine Empfehlungen basierend auf Score
+    if score >= 85.0 {
+        recommendations.insert(0, "🎯 Exzellente Konfiguration! Training sollte gut verlaufen.".to_string());
+    } else if score >= 70.0 {
+        recommendations.insert(0, "✅ Gute Konfiguration mit kleinen Optimierungsmöglichkeiten.".to_string());
+    } else if score >= 50.0 {
+        warnings.insert(0, "⚠️ Konfiguration funktioniert, aber nicht optimal.".to_string());
+    } else {
+        warnings.insert(0, "❌ Problematische Konfiguration.".to_string());
+    }
+    
+    // Schätze Trainingszeit
+    let steps_per_epoch = (samples as f64 / effective_batch_size as f64).ceil();
+    let total_steps = steps_per_epoch * config.epochs as f64;
+    let seconds_per_step = if config.fp16 || config.bf16 { 0.3 } else { 0.5 };
+    let total_seconds = total_steps * seconds_per_step;
+    let hours = (total_seconds / 3600.0).floor() as u32;
+    let minutes = ((total_seconds % 3600.0) / 60.0).floor() as u32;
+    
+    let estimated_time = if hours > 0 {
+        format!("~{} Stunden {} Minuten", hours, minutes)
+    } else {
+        format!("~{} Minuten", minutes)
+    };
+    
+    // Schätze Speicher
+    let memory_gb = (config.batch_size as f64 * 0.5) + 2.0;
+    let estimated_memory = format!("~{} GB", memory_gb.ceil() as u32);
+    
+    Ok(ConfigValidation {
+        is_valid: score >= 50.0,
+        quality_level: quality_level.to_string(),
+        overall_score: score,
+        warnings,
+        recommendations,
+        issues,
+        estimated_training_time: estimated_time,
+        estimated_memory_usage: estimated_memory,
+    })
+}
+
+impl Default for TrainingConfig {
+    fn default() -> Self {
+        TrainingConfig {
+            learning_rate: 0.00002,  // 2e-5
+            batch_size: 8,
+            eval_batch_size: Some(8),
+            epochs: 3,
+            optimizer: "adamw".to_string(),
+            weight_decay: 0.01,
+            dropout: Some(0.1),
+            max_grad_norm: 1.0,
+            warmup_ratio: 0.05,
+            warmup_steps: None,
+            lr_scheduler_type: "linear".to_string(),
+            gradient_accumulation_steps: 1,
+            fp16: false,
+            bf16: false,
+            save_strategy: "epoch".to_string(),
+            save_steps: None,
+            save_total_limit: 3,
+            eval_strategy: "epoch".to_string(),
+            eval_steps: None,
+            metric_for_best_model: Some("accuracy".to_string()),
+            load_best_model_at_end: true,
+            early_stopping_patience: Some(3),
+            early_stopping_threshold: Some(0.001),
+            logging_steps: 50,
+            logging_strategy: "steps".to_string(),
+            predict_with_generate: false,
+            generation_max_length: None,
+            generation_num_beams: None,
+            dataloader_num_workers: 0,
+            group_by_length: false,
+            label_smoothing_factor: 0.0,
+            seed: 42,
+        }
+    }
+}
