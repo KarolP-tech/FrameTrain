@@ -22,6 +22,7 @@ export default function DashboardPage() {
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [dataLoading, setDataLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
+  const [redirectingToPayment, setRedirectingToPayment] = useState(false)
 
   // Redirect wenn nicht authentifiziert
   useEffect(() => {
@@ -98,6 +99,33 @@ export default function DashboardPage() {
     setTimeout(() => setCopiedKey(null), 2000)
   }
 
+  const handlePayment = async () => {
+    setRedirectingToPayment(true)
+    try {
+      const res = await fetch('/api/payment/create-checkout', {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
+
+      if (!res.ok) {
+        throw new Error('Fehler beim Erstellen der Checkout-Session')
+      }
+
+      const data = await res.json()
+      
+      if (data.url) {
+        window.location.href = data.url
+      }
+    } catch (error) {
+      console.error('Fehler beim Weiterleiten zur Zahlung:', error)
+      alert('❌ Fehler beim Weiterleiten zur Zahlung')
+      setRedirectingToPayment(false)
+    }
+  }
+
   const downloadApp = async (platform: 'windows' | 'mac' | 'linux') => {
     const activeKey = apiKeys.find(k => k.isActive)
     if (!activeKey) {
@@ -158,7 +186,24 @@ export default function DashboardPage() {
             {apiKeys.length === 0 ? (
               <div className="text-center py-8">
                 <p className="text-gray-400 mb-4">Du hast noch keine API-Keys.</p>
-                <p className="text-gray-500 text-sm">API-Keys werden automatisch nach erfolgreicher Zahlung erstellt.</p>
+                <p className="text-gray-500 text-sm mb-6">API-Keys werden automatisch nach erfolgreicher Zahlung erstellt.</p>
+                <button
+                  onClick={handlePayment}
+                  disabled={redirectingToPayment}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-semibold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 mx-auto"
+                >
+                  {redirectingToPayment ? (
+                    <>
+                      <RefreshCw className="w-5 h-5 animate-spin" />
+                      <span>Weiterleitung...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Key className="w-5 h-5" />
+                      <span>Jetzt bezahlen & API-Key erhalten</span>
+                    </>
+                  )}
+                </button>
               </div>
             ) : (
               <div className="space-y-4">

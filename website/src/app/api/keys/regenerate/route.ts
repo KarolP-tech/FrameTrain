@@ -16,14 +16,10 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // Deaktiviere alle alten Keys
-    await prisma.apiKey.updateMany({
+    // Lösche alle alten Keys komplett aus der Datenbank
+    await prisma.apiKey.deleteMany({
       where: {
         userId: user.userId,
-        isActive: true,
-      },
-      data: {
-        isActive: false,
       },
     })
 
