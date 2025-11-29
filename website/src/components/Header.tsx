@@ -73,6 +73,12 @@ export function Header() {
                         Dashboard
                       </Link>
                       <Link
+                        href="/extensions"
+                        className="px-4 py-2 text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-all duration-300"
+                      >
+                        Extensions
+                      </Link>
+                      <Link
                         href="/docs"
                         className="px-4 py-2 text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-all duration-300 hidden md:block"
                       >
@@ -95,6 +101,12 @@ export function Header() {
                         className="px-4 py-2 text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-all duration-300 hidden sm:block"
                       >
                         Features
+                      </Link>
+                      <Link
+                        href="/extensions"
+                        className="px-4 py-2 text-gray-300 hover:text-white hover:bg-white/5 rounded-xl transition-all duration-300 hidden sm:block"
+                      >
+                        Extensions
                       </Link>
                       <Link
                         href="/#pricing"
