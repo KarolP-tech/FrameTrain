@@ -42,14 +42,14 @@ function PaymentSuccessContent() {
             </div>
 
             {/* Success Message */}
-            <h1 className="text-4xl font-bold mb-4">Zahlung erfolgreich! 🎉</h1>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">Zahlung erfolgreich! 🎉</h1>
             <p className="text-xl text-gray-600 mb-8">
               Vielen Dank für deinen Kauf! Du hast jetzt vollen Zugang zu FrameTrain.
             </p>
 
             {/* Next Steps */}
             <div className="bg-blue-50 rounded-xl p-6 mb-8 text-left">
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
                 <Key className="w-5 h-5 text-primary-600" />
                 Nächste Schritte
               </h2>
@@ -58,25 +58,25 @@ function PaymentSuccessContent() {
                   <span className="bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-sm font-semibold">
                     1
                   </span>
-                  <span>Gehe zum Dashboard um deinen API-Key zu sehen</span>
+                  <span className="text-gray-800">Gehe zum Dashboard um deinen API-Key zu sehen</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-sm font-semibold">
                     2
                   </span>
-                  <span>Lade die Desktop-App für dein Betriebssystem herunter</span>
+                  <span className="text-gray-800">Lade die Desktop-App für dein Betriebssystem herunter</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-sm font-semibold">
                     3
                   </span>
-                  <span>Melde dich in der App mit deinem API-Key an</span>
+                  <span className="text-gray-800">Melde dich in der App mit deinem API-Key an</span>
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="bg-primary-600 text-white rounded-full w-6 h-6 flex items-center justify-center flex-shrink-0 text-sm font-semibold">
                     4
                   </span>
-                  <span>Starte dein erstes ML-Training! 🚀</span>
+                  <span className="text-gray-800">Starte dein erstes ML-Training! 🚀</span>
                 </li>
               </ol>
             </div>

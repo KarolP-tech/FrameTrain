@@ -66,7 +66,7 @@ export default function PaymentPage() {
           <div className="bg-white rounded-2xl shadow-xl p-8 md:p-12">
             {/* Header */}
             <div className="text-center mb-8">
-              <h1 className="text-4xl font-bold mb-4">Zahlung abschließen</h1>
+              <h1 className="text-4xl font-bold text-gray-900 mb-4">Zahlung abschließen</h1>
               <p className="text-gray-600">
                 Einmalige Zahlung für lebenslangen Zugang
               </p>
@@ -83,23 +83,23 @@ export default function PaymentPage() {
                 <div className="space-y-3 text-left">
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>Voller Zugang zur Desktop-App</span>
+                    <span className="text-gray-800">Voller Zugang zur Desktop-App</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>Unbegrenzte Modelle & Trainings</span>
+                    <span className="text-gray-800">Unbegrenzte Modelle & Trainings</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>Lebenslange Updates</span>
+                    <span className="text-gray-800">Lebenslange Updates</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>API-Key sofort nach Zahlung</span>
+                    <span className="text-gray-800">API-Key sofort nach Zahlung</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
-                    <span>Community Support</span>
+                    <span className="text-gray-800">Community Support</span>
                   </div>
                 </div>
               </div>
@@ -109,7 +109,7 @@ export default function PaymentPage() {
             <div className="bg-gray-50 rounded-lg p-4 mb-6">
               <div className="flex items-center justify-between">
                 <span className="text-gray-600">Zahlung für:</span>
-                <span className="font-semibold">{user?.email}</span>
+                <span className="font-semibold text-gray-900">{user?.email}</span>
               </div>
             </div>
 
