@@ -77,15 +77,15 @@ jobs:
           sudo apt-get install -y libwebkit2gtk-4.0-dev build-essential curl wget libssl-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
       
       - name: Install dependencies
-        working-directory: ./desktop-app
+        working-directory: ./desktop-app2
         run: npm ci
       
       - name: Run tests
-        working-directory: ./desktop-app
+        working-directory: ./desktop-app2
         run: npm test
       
       - name: Build Tauri app
-        working-directory: ./desktop-app
+        working-directory: ./desktop-app2
         run: npm run tauri:build
   
   # CLI Tests

@@ -1,0 +1,172 @@
+name: Release Desktop App
+
+on:
+  push:
+    tags:
+      - 'v*.*.*' # Triggered by tags like v1.0.0
+  workflow_dispatch: # Manual trigger
+    inputs:
+      version:
+        description: 'Release version (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.create-release.outputs.result }}
+      release_upload_url: ${{ steps.create-release.outputs.upload_url }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Get version
+        id: get_version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+          fi
+      
+      - name: Create Release
+        id: create-release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.get_version.outputs.VERSION }}
+          release_name: FrameTrain Desktop App v${{ steps.get_version.outputs.VERSION }}
+          body: |
+            ## FrameTrain Desktop App v${{ steps.get_version.outputs.VERSION }}
+            
+            ### 🎉 Features
+            - AI-powered local machine learning training
+            - Multi-platform support (Windows, macOS, Linux)
+            - Secure API-key authentication
+            - Real-time training visualization
+            - Dataset management
+            
+            ### 📦 Downloads
+            Choose your platform below:
+            - **Windows**: .msi installer
+            - **macOS**: .dmg installer (Apple Silicon & Intel)
+            - **Linux**: .AppImage (portable)
+            
+            ### 🔐 Installation
+            1. Download the installer for your platform
+            2. Install the application
+            3. Log in with your API key from [frame-train.vercel.app](https://frame-train.vercel.app/dashboard)
+            
+            ### 📖 Documentation
+            - [User Guide](https://frame-train.vercel.app/docs)
+            - [API Documentation](https://frame-train.vercel.app/docs/api)
+            
+            ### ⚠️ System Requirements
+            - **Windows**: Windows 10/11 (64-bit)
+            - **macOS**: macOS 11.0 or later
+            - **Linux**: Ubuntu 20.04 or later (or equivalent)
+            - **RAM**: 8GB minimum, 16GB recommended
+            - **Storage**: 2GB free space
+            
+            ---
+            
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.get_version.outputs.VERSION }}
+          draft: false
+          prerelease: false
+
+  build-tauri:
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: 'macos-latest'
+            args: '--target universal-apple-darwin'
+            rust_target: 'universal-apple-darwin'
+          - platform: 'ubuntu-22.04'
+            args: ''
+            rust_target: 'x86_64-unknown-linux-gnu'
+          - platform: 'windows-latest'
+            args: ''
+            rust_target: 'x86_64-pc-windows-msvc'
+
+    runs-on: ${{ matrix.platform }}
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.rust_target }}
+      
+      - name: Install dependencies (Ubuntu only)
+        if: matrix.platform == 'ubuntu-22.04'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      
+      - name: Install frontend dependencies
+        working-directory: ./desktop-app2
+        run: npm ci
+      
+      - name: Build Tauri App
+        working-directory: ./desktop-app2
+        run: npm run tauri:build -- ${{ matrix.args }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Upload Release Assets (macOS)
+        if: matrix.platform == 'macos-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.release_upload_url }}
+          asset_path: ./desktop-app2/src-tauri/target/universal-apple-darwin/release/bundle/dmg/FrameTrain 2_1.0.0_universal.dmg
+          asset_name: FrameTrain-Desktop-v${{ needs.create-release.outputs.VERSION }}-macOS-universal.dmg
+          asset_content_type: application/octet-stream
+      
+      - name: Upload Release Assets (Windows)
+        if: matrix.platform == 'windows-latest'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.release_upload_url }}
+          asset_path: ./desktop-app2/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/FrameTrain 2_1.0.0_x64_en-US.msi
+          asset_name: FrameTrain-Desktop-v${{ needs.create-release.outputs.VERSION }}-Windows-x64.msi
+          asset_content_type: application/octet-stream
+      
+      - name: Upload Release Assets (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ needs.create-release.outputs.release_upload_url }}
+          asset_path: ./desktop-app2/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/frametrain-app-2_1.0.0_amd64.AppImage
+          asset_name: FrameTrain-Desktop-v${{ needs.create-release.outputs.VERSION }}-Linux-x86_64.AppImage
+          asset_content_type: application/octet-stream
+
+  notify-release:
+    needs: [create-release, build-tauri]
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Notify Success
+        run: |
+          echo "✅ Release v${{ needs.create-release.outputs.VERSION }} created successfully!"
+          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.create-release.outputs.VERSION }}"

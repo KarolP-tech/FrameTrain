@@ -92,7 +92,103 @@ impl Database {
     
     /// Initialisiert das Datenbank-Schema
     fn init_schema(conn: &Connection) -> Result<()> {
-        let schema = include_str!("../../schema.sql");
+        let schema = r#"
+-- FrameTrain Desktop App Database Schema
+
+-- Models Table
+CREATE TABLE IF NOT EXISTS models (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    base_model TEXT,
+    model_path TEXT,
+    status TEXT NOT NULL DEFAULT 'created',
+    user_id TEXT NOT NULL DEFAULT 'default_user',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Model Versions Table
+CREATE TABLE IF NOT EXISTS model_versions (
+    id TEXT PRIMARY KEY,
+    model_id TEXT NOT NULL,
+    version INTEGER NOT NULL,
+    version_path TEXT,
+    status TEXT NOT NULL DEFAULT 'pending',
+    user_id TEXT NOT NULL DEFAULT 'default_user',
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    completed_at TEXT
+);
+
+-- Training Configs Table
+CREATE TABLE IF NOT EXISTS training_configs (
+    id TEXT PRIMARY KEY,
+    version_id TEXT NOT NULL,
+    dataset_path TEXT NOT NULL,
+    epochs INTEGER NOT NULL,
+    batch_size INTEGER NOT NULL,
+    learning_rate REAL NOT NULL,
+    optimizer TEXT NOT NULL,
+    loss_function TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Training Metrics Table
+CREATE TABLE IF NOT EXISTS training_metrics (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    version_id TEXT NOT NULL,
+    epoch INTEGER NOT NULL,
+    loss REAL NOT NULL,
+    accuracy REAL,
+    val_loss REAL,
+    val_accuracy REAL,
+    timestamp TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Datasets Table
+CREATE TABLE IF NOT EXISTS datasets (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    file_path TEXT NOT NULL,
+    file_type TEXT NOT NULL,
+    size_bytes INTEGER,
+    rows_count INTEGER,
+    columns_count INTEGER,
+    validated BOOLEAN NOT NULL DEFAULT 0,
+    user_id TEXT NOT NULL DEFAULT 'default_user',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Test Results Table
+CREATE TABLE IF NOT EXISTS test_results (
+    id TEXT PRIMARY KEY,
+    version_id TEXT NOT NULL,
+    total_samples INTEGER NOT NULL,
+    correct_predictions INTEGER NOT NULL,
+    accuracy REAL NOT NULL,
+    average_loss REAL,
+    average_inference_time REAL NOT NULL,
+    results_json TEXT NOT NULL,
+    user_id TEXT NOT NULL DEFAULT 'default_user',
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- App Config Table
+CREATE TABLE IF NOT EXISTS app_config (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Create Indexes
+CREATE INDEX IF NOT EXISTS idx_models_user_id ON models(user_id);
+CREATE INDEX IF NOT EXISTS idx_model_versions_model_id ON model_versions(model_id);
+CREATE INDEX IF NOT EXISTS idx_model_versions_user_id ON model_versions(user_id);
+CREATE INDEX IF NOT EXISTS idx_training_metrics_version_id ON training_metrics(version_id);
+CREATE INDEX IF NOT EXISTS idx_datasets_user_id ON datasets(user_id);
+CREATE INDEX IF NOT EXISTS idx_test_results_version_id ON test_results(version_id);
+CREATE INDEX IF NOT EXISTS idx_test_results_user_id ON test_results(user_id);
+        "#;
         conn.execute_batch(schema)?;
         Ok(())
     }
@@ -108,14 +204,27 @@ impl Database {
         
         if let Ok(count) = migration_check {
             if count > 0 {
-                // Migration bereits durchgeführt
+                // Migration bereits durchgeführt - nur Indexes erstellen
+                let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_models_user_id ON models(user_id)", []);
+                let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_model_versions_user_id ON model_versions(user_id)", []);
+                let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_datasets_user_id ON datasets(user_id)", []);
+                let _ = conn.execute("CREATE INDEX IF NOT EXISTS idx_test_results_user_id ON test_results(user_id)", []);
                 return Ok(());
             }
         }
         
-        // Führe Migration aus
-        let migration = include_str!("../../schema_migration_user_isolation.sql");
-        conn.execute_batch(migration)?;
+        // Führe Migration aus - mit Fehlerbehandlung für bereits existierende Spalten
+        // Add user_id columns
+        let _ = conn.execute("ALTER TABLE models ADD COLUMN user_id TEXT NOT NULL DEFAULT 'default_user'", []);
+        let _ = conn.execute("ALTER TABLE model_versions ADD COLUMN user_id TEXT NOT NULL DEFAULT 'default_user'", []);
+        let _ = conn.execute("ALTER TABLE datasets ADD COLUMN user_id TEXT NOT NULL DEFAULT 'default_user'", []);
+        let _ = conn.execute("ALTER TABLE test_results ADD COLUMN user_id TEXT NOT NULL DEFAULT 'default_user'", []);
+        
+        // Create indexes
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_models_user_id ON models(user_id)", [])?;
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_model_versions_user_id ON model_versions(user_id)", [])?;
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_datasets_user_id ON datasets(user_id)", [])?;
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_test_results_user_id ON test_results(user_id)", [])?;
         
         Ok(())
     }
