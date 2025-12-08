@@ -15,8 +15,9 @@ jobs:
   create-release:
     runs-on: ubuntu-latest
     outputs:
-      release_id: ${{ steps.create-release.outputs.result }}
+      release_id: ${{ steps.create-release.outputs.id }}
       release_upload_url: ${{ steps.create-release.outputs.upload_url }}
+      version: ${{ steps.get_version.outputs.version }}
     
     steps:
       - uses: actions/checkout@v4
@@ -30,21 +31,19 @@ jobs:
         id: get_version
         run: |
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            echo "VERSION=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+            echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
           else
-            echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+            echo "version=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
           fi
       
       - name: Create Release
         id: create-release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ steps.get_version.outputs.VERSION }}
-          release_name: FrameTrain Desktop App v${{ steps.get_version.outputs.VERSION }}
+          tag_name: v${{ steps.get_version.outputs.version }}
+          name: FrameTrain Desktop App v${{ steps.get_version.outputs.version }}
           body: |
-            ## FrameTrain Desktop App v${{ steps.get_version.outputs.VERSION }}
+            ## FrameTrain Desktop App v${{ steps.get_version.outputs.version }}
             
             ### 🎉 Features
             - AI-powered local machine learning training
@@ -77,9 +76,12 @@ jobs:
             
             ---
             
-            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.get_version.outputs.VERSION }}
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/v${{ steps.get_version.outputs.version }}
           draft: false
           prerelease: false
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   build-tauri:
     needs: create-release
@@ -130,36 +132,33 @@ jobs:
       
       - name: Upload Release Assets (macOS)
         if: matrix.platform == 'macos-latest'
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.create-release.outputs.version }}
+          files: |
+            ./desktop-app2/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.release_upload_url }}
-          asset_path: ./desktop-app2/src-tauri/target/universal-apple-darwin/release/bundle/dmg/FrameTrain 2_1.0.0_universal.dmg
-          asset_name: FrameTrain-Desktop-v${{ needs.create-release.outputs.VERSION }}-macOS-universal.dmg
-          asset_content_type: application/octet-stream
       
       - name: Upload Release Assets (Windows)
         if: matrix.platform == 'windows-latest'
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.create-release.outputs.version }}
+          files: |
+            ./desktop-app2/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.release_upload_url }}
-          asset_path: ./desktop-app2/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/FrameTrain 2_1.0.0_x64_en-US.msi
-          asset_name: FrameTrain-Desktop-v${{ needs.create-release.outputs.VERSION }}-Windows-x64.msi
-          asset_content_type: application/octet-stream
       
       - name: Upload Release Assets (Linux)
         if: matrix.platform == 'ubuntu-22.04'
-        uses: actions/upload-release-asset@v1
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.create-release.outputs.version }}
+          files: |
+            ./desktop-app2/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ needs.create-release.outputs.release_upload_url }}
-          asset_path: ./desktop-app2/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/frametrain-app-2_1.0.0_amd64.AppImage
-          asset_name: FrameTrain-Desktop-v${{ needs.create-release.outputs.VERSION }}-Linux-x86_64.AppImage
-          asset_content_type: application/octet-stream
 
   notify-release:
     needs: [create-release, build-tauri]
@@ -168,5 +167,5 @@ jobs:
     steps:
       - name: Notify Success
         run: |
-          echo "✅ Release v${{ needs.create-release.outputs.VERSION }} created successfully!"
-          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.create-release.outputs.VERSION }}"
+          echo "✅ Release v${{ needs.create-release.outputs.version }} created successfully!"
+          echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.create-release.outputs.version }}"
