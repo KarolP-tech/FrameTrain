@@ -3,9 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use reqwest;
-
-mod api_config;
-use api_config::endpoints;
+use crate::api_config::endpoints;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct ApiKeyValidation {

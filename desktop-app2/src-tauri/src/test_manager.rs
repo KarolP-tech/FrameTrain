@@ -500,7 +500,7 @@ fn run_test_process(
                             }
                             
                             // CRITICAL FIX: Include version_id in event payload
-                            let mut event_data = serde_json::json!({
+                            let event_data = serde_json::json!({
                                 "test_id": test_id_clone,
                                 "version_id": version_id.clone(),  // ADD version_id!
                                 "data": msg.get("data")

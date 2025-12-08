@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::io::{BufRead, BufReader};
-use tauri::{AppHandle, Manager, Window};
+use tauri::{AppHandle, Window};
 use tauri::Emitter;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -256,7 +256,7 @@ pub async fn handle_plugin_approval(
 
 // ===== Helper Functions =====
 
-fn get_python_executable(app_handle: &AppHandle) -> Result<String, String> {
+fn get_python_executable(_app_handle: &AppHandle) -> Result<String, String> {
     // Try to find Python executable
     
     // Check if running from bundled app
@@ -281,7 +281,7 @@ fn get_python_executable(app_handle: &AppHandle) -> Result<String, String> {
     return Ok("python3".to_string());
 }
 
-fn get_resource_path(app_handle: &AppHandle, relative: &str) -> Result<PathBuf, String> {
+fn get_resource_path(_app_handle: &AppHandle, relative: &str) -> Result<PathBuf, String> {
     // Get resource path based on environment
     
     // Development: use src-tauri/../python/
