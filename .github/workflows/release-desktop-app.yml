@@ -141,7 +141,7 @@ jobs:
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
-            ./desktop-app2/src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
+            ./desktop-app2/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
