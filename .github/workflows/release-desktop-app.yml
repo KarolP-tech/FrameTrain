@@ -135,13 +135,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
+      - name: List build artifacts (Debug)
+        run: |
+          echo "Listing build artifacts..."
+          find ./desktop-app2/src-tauri/target -name "*.dmg" -o -name "*.msi" -o -name "*.AppImage" || echo "No artifacts found"
+      
       - name: Upload Release Assets (macOS)
         if: matrix.platform == 'macos-latest'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
-            ./desktop-app2/src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            ./desktop-app2/src-tauri/target/${{ matrix.rust_target }}/release/bundle/dmg/*.dmg
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -151,7 +156,7 @@ jobs:
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
-            ./desktop-app2/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi
+            ./desktop-app2/src-tauri/target/${{ matrix.rust_target }}/release/bundle/msi/*.msi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -161,7 +166,7 @@ jobs:
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
-            ./desktop-app2/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/*.AppImage
+            ./desktop-app2/src-tauri/target/${{ matrix.rust_target }}/release/bundle/appimage/*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
