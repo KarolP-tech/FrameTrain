@@ -135,10 +135,18 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: List build artifacts (Debug)
+      - name: List build artifacts (Debug - Unix)
+        if: runner.os != 'Windows'
         run: |
           echo "Listing build artifacts..."
-          find ./desktop-app2/src-tauri/target -name "*.dmg" -o -name "*.msi" -o -name "*.AppImage" || echo "No artifacts found"
+          find ./desktop-app2/src-tauri/target -name "*.dmg" -o -name "*.msi" -o -name "*.AppImage" 2>/dev/null || echo "No artifacts found"
+      
+      - name: List build artifacts (Debug - Windows)
+        if: runner.os == 'Windows'
+        run: |
+          echo "Listing build artifacts..."
+          Get-ChildItem -Path .\desktop-app2\src-tauri\target -Recurse -Include *.msi,*.exe -ErrorAction SilentlyContinue | Select-Object FullName
+        shell: pwsh
       
       - name: Upload Release Assets (macOS)
         if: matrix.platform == 'macos-latest'
