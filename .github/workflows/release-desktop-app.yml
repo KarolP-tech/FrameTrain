@@ -135,18 +135,11 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
-      - name: List build artifacts (Debug - Unix)
-        if: runner.os != 'Windows'
+      - name: List all files in target directory (Debug)
         run: |
-          echo "Listing build artifacts..."
-          find ./desktop-app2/src-tauri/target -name "*.dmg" -o -name "*.msi" -o -name "*.AppImage" 2>/dev/null || echo "No artifacts found"
-      
-      - name: List build artifacts (Debug - Windows)
-        if: runner.os == 'Windows'
-        run: |
-          echo "Listing build artifacts..."
-          Get-ChildItem -Path .\desktop-app2\src-tauri\target -Recurse -Include *.msi,*.exe -ErrorAction SilentlyContinue | Select-Object FullName
-        shell: pwsh
+          echo "=== Listing all bundle files ==="
+          ls -R ./desktop-app2/src-tauri/target/ || true
+        shell: bash
       
       - name: Upload Release Assets (macOS)
         if: matrix.platform == 'macos-latest'
@@ -154,7 +147,8 @@ jobs:
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
-            ./desktop-app2/src-tauri/target/${{ matrix.rust_target }}/release/bundle/dmg/*.dmg
+            ./desktop-app2/src-tauri/target/**/release/bundle/dmg/*.dmg
+            ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.app.tar.gz
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -164,7 +158,8 @@ jobs:
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
-            ./desktop-app2/src-tauri/target/${{ matrix.rust_target }}/release/bundle/msi/*.msi
+            ./desktop-app2/src-tauri/target/**/release/bundle/msi/*.msi
+            ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -174,7 +169,8 @@ jobs:
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
-            ./desktop-app2/src-tauri/target/${{ matrix.rust_target }}/release/bundle/appimage/*.AppImage
+            ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage
+            ./desktop-app2/src-tauri/target/**/release/bundle/deb/*.deb
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
