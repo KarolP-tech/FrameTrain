@@ -111,24 +111,138 @@ impl Default for TestState {
 // ============ Helper Functions ============
 
 fn get_python_path() -> String {
-    let candidates = if cfg!(target_os = "windows") {
+    println!("[Test Python] 🔍 ROBUST SEARCH: Finding best Python installation...");
+    
+    #[derive(Debug)]
+    struct PythonCandidate {
+        path: String,
+        version: (u32, u32, u32),
+    }
+    
+    let mut candidates: Vec<PythonCandidate> = Vec::new();
+    
+    // STRATEGY 1: Search common installation directories on macOS/Linux
+    if !cfg!(target_os = "windows") {
+        let search_paths = vec![
+            // Homebrew (Intel)
+            "/usr/local/bin",
+            // Homebrew (Apple Silicon)
+            "/opt/homebrew/bin",
+            // Python.org installations
+            "/Library/Frameworks/Python.framework/Versions/3.13/bin",
+            "/Library/Frameworks/Python.framework/Versions/3.12/bin",
+            "/Library/Frameworks/Python.framework/Versions/3.11/bin",
+            "/Library/Frameworks/Python.framework/Versions/3.10/bin",
+            "/Library/Frameworks/Python.framework/Versions/3.9/bin",
+            // System Python
+            "/usr/bin",
+        ];
+        
+        for base_path in search_paths {
+            // Check for python3.X and python3
+            for name in &["python3.13", "python3.12", "python3.11", "python3.10", "python3.9", "python3"] {
+                let full_path = format!("{}/{}", base_path, name);
+                
+                if let Ok(output) = Command::new(&full_path).arg("--version").output() {
+                    if output.status.success() {
+                        let version_str = String::from_utf8_lossy(&output.stdout);
+                        if let Some(version) = parse_python_version(&version_str) {
+                            println!("[Test Python] ✅ Found: {} -> v{}.{}.{}", full_path, version.0, version.1, version.2);
+                            candidates.push(PythonCandidate {
+                                path: full_path,
+                                version,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // STRATEGY 2: Use 'which' command to find python in PATH
+    for cmd in &["python3", "python"] {
+        if let Ok(output) = Command::new("which").arg(cmd).output() {
+            if output.status.success() {
+                let which_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
+                if !which_path.is_empty() {
+                    if let Ok(version_output) = Command::new(&which_path).arg("--version").output() {
+                        if version_output.status.success() {
+                            let version_str = String::from_utf8_lossy(&version_output.stdout);
+                            if let Some(version) = parse_python_version(&version_str) {
+                                println!("[Test Python] ✅ Found via 'which': {} -> v{}.{}.{}", which_path, version.0, version.1, version.2);
+                                candidates.push(PythonCandidate {
+                                    path: which_path,
+                                    version,
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    // STRATEGY 3: Try command names directly (fallback for Windows or restricted environments)
+    let cmd_names = if cfg!(target_os = "windows") {
         vec!["python", "python3", "py"]
     } else {
         vec!["python3", "python"]
     };
     
-    for candidate in candidates {
-        let test = Command::new(candidate).arg("--version").output();
-        if test.is_ok() && test.unwrap().status.success() {
-            return candidate.to_string();
+    for cmd in cmd_names {
+        if let Ok(output) = Command::new(cmd).arg("--version").output() {
+            if output.status.success() {
+                let version_str = String::from_utf8_lossy(&output.stdout);
+                if let Some(version) = parse_python_version(&version_str) {
+                    println!("[Test Python] ✅ Found via command: {} -> v{}.{}.{}", cmd, version.0, version.1, version.2);
+                    candidates.push(PythonCandidate {
+                        path: cmd.to_string(),
+                        version,
+                    });
+                }
+            }
         }
     }
     
+    // Remove duplicates (same version, different paths)
+    candidates.sort_by(|a, b| b.version.cmp(&a.version));
+    candidates.dedup_by(|a, b| a.version == b.version);
+    
+    // Select the best (highest version)
+    if let Some(best) = candidates.first() {
+        println!("[Test Python] 🎯 SELECTED: {} (v{}.{}.{})", best.path, best.version.0, best.version.1, best.version.2);
+        println!("[Test Python] 📊 All candidates found: {:?}", candidates);
+        return best.path.clone();
+    }
+    
+    // Fallback
+    println!("[Test Python] ⚠️  WARNING: No Python found! Using fallback.");
     if cfg!(target_os = "windows") {
         "python".to_string()
     } else {
         "python3".to_string()
     }
+}
+
+fn parse_python_version(version_str: &str) -> Option<(u32, u32, u32)> {
+    // Parse version from strings like "Python 3.11.1"
+    let parts: Vec<&str> = version_str.split_whitespace().collect();
+    if parts.len() < 2 {
+        return None;
+    }
+    
+    let version_part = parts[1];
+    let nums: Vec<&str> = version_part.split('.').collect();
+    
+    if nums.len() < 2 {
+        return None;
+    }
+    
+    let major = nums[0].parse::<u32>().ok()?;
+    let minor = nums[1].parse::<u32>().ok()?;
+    let patch = nums.get(2).and_then(|p| p.parse::<u32>().ok()).unwrap_or(0);
+    
+    Some((major, minor, patch))
 }
 
 fn get_test_engine_path(app_handle: &tauri::AppHandle) -> Result<PathBuf, String> {
