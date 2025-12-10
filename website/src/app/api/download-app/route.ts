@@ -19,10 +19,14 @@ interface ReleaseAsset {
 interface GitHubRelease {
   tag_name: string;
   assets: ReleaseAsset[];
+  prerelease: boolean;
+  draft: boolean;
+  published_at: string;
 }
 
 /**
  * Get the latest release from GitHub
+ * CRITICAL FIX: Get ALL releases and sort by date to find the ACTUAL latest
  */
 async function getLatestRelease(): Promise<GitHubRelease | null> {
   try {
@@ -35,8 +39,9 @@ async function getLatestRelease(): Promise<GitHubRelease | null> {
       headers['Authorization'] = `Bearer ${GITHUB_TOKEN}`;
     }
 
+    // Get ALL releases, not just "latest" tag
     const response = await fetch(
-      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases`,
       { headers }
     );
 
@@ -45,7 +50,29 @@ async function getLatestRelease(): Promise<GitHubRelease | null> {
       return null;
     }
 
-    return await response.json();
+    const releases: GitHubRelease[] = await response.json();
+    
+    if (!releases || releases.length === 0) {
+      console.error('No releases found');
+      return null;
+    }
+
+    // Filter out pre-releases and drafts, then sort by date
+    const validReleases = releases
+      .filter(r => !r.prerelease && !r.draft)
+      .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
+    
+    if (validReleases.length === 0) {
+      console.error('No valid releases found');
+      return null;
+    }
+
+    const latestRelease = validReleases[0];
+    
+    console.log('[Download] Latest release:', latestRelease.tag_name, 'published:', latestRelease.published_at);
+    console.log('[Download] Assets:', latestRelease.assets.map(a => a.name));
+    
+    return latestRelease;
   } catch (error) {
     console.error('Failed to fetch release:', error);
     return null;

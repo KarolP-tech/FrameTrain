@@ -12,10 +12,13 @@ interface GitHubRelease {
   tag_name: string;
   name: string;
   published_at: string;
+  prerelease: boolean;
+  draft: boolean;
 }
 
 /**
  * Get the latest release version from GitHub
+ * Uses /releases endpoint and sorts by date to get the ACTUAL latest release
  */
 async function getLatestVersion(): Promise<{ version: string; name: string; date: string } | null> {
   try {
@@ -28,11 +31,13 @@ async function getLatestVersion(): Promise<{ version: string; name: string; date
       headers['Authorization'] = `Bearer ${GITHUB_TOKEN}`;
     }
 
+    // CRITICAL FIX: Get ALL releases and sort by date to find the ACTUAL latest
+    // Don't rely on GitHub's "latest" flag which might be outdated
     const response = await fetch(
-      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases/latest`,
+      `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO}/releases`,
       { 
         headers,
-        next: { revalidate: 300 } // Cache for 5 minutes
+        next: { revalidate: 60 } // Cache for 1 minute only
       }
     );
 
@@ -41,12 +46,32 @@ async function getLatestVersion(): Promise<{ version: string; name: string; date
       return null;
     }
 
-    const release: GitHubRelease = await response.json();
+    const releases: GitHubRelease[] = await response.json();
+    
+    if (!releases || releases.length === 0) {
+      console.error('No releases found');
+      return null;
+    }
+
+    // Filter out pre-releases and drafts, then sort by date
+    const validReleases = releases
+      .filter(r => !r.prerelease && !r.draft)
+      .sort((a, b) => new Date(b.published_at).getTime() - new Date(a.published_at).getTime());
+    
+    if (validReleases.length === 0) {
+      console.error('No valid releases found');
+      return null;
+    }
+
+    const latestRelease = validReleases[0];
+    
+    console.log('[App Version] Latest release:', latestRelease.tag_name, 'published:', latestRelease.published_at);
+    console.log('[App Version] All releases:', releases.map(r => `${r.tag_name} (${r.published_at})`));
     
     return {
-      version: release.tag_name,
-      name: release.name,
-      date: release.published_at
+      version: latestRelease.tag_name,
+      name: latestRelease.name,
+      date: latestRelease.published_at
     };
   } catch (error) {
     console.error('Failed to fetch version:', error);
