@@ -133,7 +133,30 @@ export default function DashboardPage() {
       return
     }
 
-    window.location.href = `/api/download-app?platform=${platform}&key=${activeKey.key}`
+    try {
+      // Fetch download info from API
+      const res = await fetch(`/api/download-app?platform=${platform}&key=${activeKey.key}`, {
+        credentials: 'include',
+      })
+
+      if (!res.ok) {
+        const error = await res.json()
+        alert(`❌ ${error.message || 'Download fehlgeschlagen'}`)
+        return
+      }
+
+      const data = await res.json()
+      
+      if (data.download_url) {
+        // Redirect to actual download URL
+        window.location.href = data.download_url
+      } else {
+        alert('❌ Download-URL nicht gefunden')
+      }
+    } catch (error) {
+      console.error('Download-Fehler:', error)
+      alert('❌ Fehler beim Herunterladen')
+    }
   }
 
   // Loading state

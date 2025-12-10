@@ -56,8 +56,15 @@ async function getLatestRelease(): Promise<GitHubRelease | null> {
  * Find the correct asset for the platform
  */
 function findAssetForPlatform(assets: ReleaseAsset[], platform: string): ReleaseAsset | null {
+  // Exclude source code archives
+  const installerAssets = assets.filter(asset => 
+    !asset.name.includes('Source code') &&
+    !asset.name.endsWith('.zip') && 
+    !asset.name.endsWith('.tar.gz')
+  );
+  
   const patterns: Record<string, RegExp> = {
-    windows: /\.msi$|\.exe$/i,
+    windows: /\.(msi|exe)$/i,
     mac: /\.dmg$/i,
     linux: /\.AppImage$/i,
   };
@@ -65,7 +72,14 @@ function findAssetForPlatform(assets: ReleaseAsset[], platform: string): Release
   const pattern = patterns[platform];
   if (!pattern) return null;
 
-  return assets.find(asset => pattern.test(asset.name)) || null;
+  const found = installerAssets.find(asset => pattern.test(asset.name));
+  
+  // Debug logging
+  console.log('Platform:', platform);
+  console.log('Available installer assets:', installerAssets.map(a => a.name));
+  console.log('Found asset:', found?.name);
+  
+  return found || null;
 }
 
 /**
