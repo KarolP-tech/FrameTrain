@@ -254,30 +254,72 @@ impl Default for TrainingState {
 // ============ Helper Functions ============
 
 fn get_python_path() -> String {
-    // Versuche verschiedene Python-Pfade in Prioritätsreihenfolge
+    // CRITICAL: Find the BEST (newest) Python version available
+    // Priority: python3.13 > python3.12 > python3.11 > ... > python3 > python
+    
     let candidates = if cfg!(target_os = "windows") {
-        vec!["python", "python3", "py"]
+        vec![
+            "python3.13", "python3.12", "python3.11", "python3.10", "python3.9",
+            "python3", "python", "py"
+        ]
     } else {
-        // macOS/Linux: python3 zuerst versuchen
-        vec!["python3", "python"]
+        // macOS/Linux: Try specific versions first, then generic python3
+        vec![
+            "python3.13", "python3.12", "python3.11", "python3.10", "python3.9",
+            "python3", "python"
+        ]
     };
     
-    // Teste jeden Kandidaten
+    println!("[Python] Searching for best Python version...");
+    
+    // Track the best version found
+    let mut best_candidate = String::new();
+    let mut best_version = (0, 0, 0); // (major, minor, patch)
+    
+    // Test each candidate and track the highest version
     for candidate in candidates {
         let test = Command::new(candidate)
             .arg("--version")
             .output();
         
-        if test.is_ok() && test.unwrap().status.success() {
-            return candidate.to_string();
+        if test.is_ok() {
+            let result = test.unwrap();
+            if result.status.success() {
+                let version_str = String::from_utf8_lossy(&result.stdout);
+                println!("[Python] Found: {} -> {}", candidate, version_str.trim());
+                
+                // Parse version number (e.g., "Python 3.11.1" -> (3, 11, 1))
+                if let Some(version_part) = version_str.split_whitespace().nth(1) {
+                    let parts: Vec<&str> = version_part.split('.').collect();
+                    if parts.len() >= 2 {
+                        let major = parts[0].parse::<u32>().unwrap_or(0);
+                        let minor = parts[1].parse::<u32>().unwrap_or(0);
+                        let patch = parts.get(2).and_then(|p| p.parse::<u32>().ok()).unwrap_or(0);
+                        let current_version = (major, minor, patch);
+                        
+                        // Compare versions (prefer higher major, then minor, then patch)
+                        if current_version > best_version {
+                            best_version = current_version;
+                            best_candidate = candidate.to_string();
+                            println!("[Python] ✅ New best: {} (v{}.{}.{})", best_candidate, major, minor, patch);
+                        }
+                    }
+                }
+            }
         }
     }
     
-    // Fallback
-    if cfg!(target_os = "windows") {
-        "python".to_string()
+    // Return the best version found, or fallback
+    if !best_candidate.is_empty() {
+        println!("[Python] Selected: {} (v{}.{}.{})", best_candidate, best_version.0, best_version.1, best_version.2);
+        best_candidate
     } else {
-        "python3".to_string()
+        println!("[Python] ⚠️  No Python found, using fallback");
+        if cfg!(target_os = "windows") {
+            "python".to_string()
+        } else {
+            "python3".to_string()
+        }
     }
 }
 
