@@ -185,6 +185,7 @@ impl Database {
                 base_model TEXT,
                 model_path TEXT,
                 status TEXT NOT NULL DEFAULT 'created',
+                user_id TEXT NOT NULL DEFAULT 'default_user',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(name)
@@ -192,7 +193,7 @@ impl Database {
             [],
         ).map_err(|e| format!("Failed to create models table: {}", e))?;
         
-        // 2. Create model_versions_new table (WITHOUT foreign key)
+        // 2. Create model_versions_new table with user_id
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS model_versions_new (
                 id TEXT PRIMARY KEY,
@@ -204,12 +205,13 @@ impl Database {
                 file_count INTEGER NOT NULL DEFAULT 0,
                 created_at TEXT NOT NULL,
                 is_root INTEGER NOT NULL DEFAULT 0,
-                parent_version_id TEXT
+                parent_version_id TEXT,
+                user_id TEXT NOT NULL DEFAULT 'default_user'
             )",
             [],
         ).map_err(|e| format!("Failed to create model_versions_new table: {}", e))?;
 
-        // 3. Create training_metrics_new table (WITHOUT foreign key)
+        // 3. Create training_metrics_new table with user_id
         self.conn.execute(
             "CREATE TABLE IF NOT EXISTS training_metrics_new (
                 id TEXT PRIMARY KEY,
@@ -220,10 +222,14 @@ impl Database {
                 total_steps INTEGER NOT NULL,
                 best_epoch INTEGER,
                 training_duration_seconds INTEGER,
-                created_at TEXT NOT NULL
+                created_at TEXT NOT NULL,
+                user_id TEXT NOT NULL DEFAULT 'default_user'
             )",
             [],
         ).map_err(|e| format!("Failed to create training_metrics_new table: {}", e))?;
+
+        // Migration: Add user_id to existing tables if not present
+        self.migrate_version_tables_user_id()?;
 
         // Create indices
         self.conn.execute(
@@ -235,7 +241,51 @@ impl Database {
             "CREATE INDEX IF NOT EXISTS idx_metrics_version ON training_metrics_new(version_id)",
             [],
         ).map_err(|e| format!("Failed to create index: {}", e))?;
+        
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_versions_user ON model_versions_new(user_id)",
+            [],
+        ).map_err(|e| format!("Failed to create index: {}", e))?;
+        
+        self.conn.execute(
+            "CREATE INDEX IF NOT EXISTS idx_metrics_user ON training_metrics_new(user_id)",
+            [],
+        ).map_err(|e| format!("Failed to create index: {}", e))?;
 
+        Ok(())
+    }
+    
+    fn migrate_version_tables_user_id(&self) -> Result<(), String> {
+        // Check if user_id column exists in model_versions_new
+        let has_user_id: i32 = self.conn.query_row(
+            "SELECT COUNT(*) FROM pragma_table_info('model_versions_new') WHERE name='user_id'",
+            [],
+            |row| row.get(0)
+        ).unwrap_or(0);
+        
+        if has_user_id == 0 {
+            println!("[Migration] Adding user_id to model_versions_new");
+            self.conn.execute(
+                "ALTER TABLE model_versions_new ADD COLUMN user_id TEXT NOT NULL DEFAULT 'default_user'",
+                [],
+            ).ok(); // Ignore if already exists
+        }
+        
+        // Check training_metrics_new
+        let has_user_id_metrics: i32 = self.conn.query_row(
+            "SELECT COUNT(*) FROM pragma_table_info('training_metrics_new') WHERE name='user_id'",
+            [],
+            |row| row.get(0)
+        ).unwrap_or(0);
+        
+        if has_user_id_metrics == 0 {
+            println!("[Migration] Adding user_id to training_metrics_new");
+            self.conn.execute(
+                "ALTER TABLE training_metrics_new ADD COLUMN user_id TEXT NOT NULL DEFAULT 'default_user'",
+                [],
+            ).ok(); // Ignore if already exists
+        }
+        
         Ok(())
     }
 
