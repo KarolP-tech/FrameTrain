@@ -23,6 +23,7 @@ export default function DashboardPage() {
   const [dataLoading, setDataLoading] = useState(true)
   const [regenerating, setRegenerating] = useState(false)
   const [redirectingToPayment, setRedirectingToPayment] = useState(false)
+  const [appVersion, setAppVersion] = useState('...')
 
   // Redirect wenn nicht authentifiziert
   useEffect(() => {
@@ -37,6 +38,11 @@ export default function DashboardPage() {
       fetchDashboardData()
     }
   }, [isAuthenticated, user])
+
+  // Lade App-Version
+  useEffect(() => {
+    fetchAppVersion()
+  }, [])
 
   const fetchDashboardData = async () => {
     try {
@@ -57,6 +63,19 @@ export default function DashboardPage() {
       console.error('Fehler beim Laden der Dashboard-Daten:', error)
     } finally {
       setDataLoading(false)
+    }
+  }
+
+  const fetchAppVersion = async () => {
+    try {
+      const res = await fetch('/api/app-version')
+      if (res.ok) {
+        const data = await res.json()
+        setAppVersion(data.version || '1.0.0')
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden der App-Version:', error)
+      setAppVersion('1.0.0') // Fallback
     }
   }
 
@@ -295,7 +314,7 @@ export default function DashboardPage() {
                     <Download className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-xl font-semibold text-white mb-2">Windows</h3>
-                  <p className="text-gray-400 text-sm mb-4">Version 1.0.0</p>
+                  <p className="text-gray-400 text-sm mb-4">Version {appVersion}</p>
                   <div className="flex items-center justify-center text-purple-400 group-hover:text-purple-300">
                     <Download className="w-4 h-4 mr-2" />
                     <span className="font-semibold">Download .exe</span>
@@ -313,7 +332,7 @@ export default function DashboardPage() {
                     <Download className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-xl font-semibold text-white mb-2">macOS</h3>
-                  <p className="text-gray-400 text-sm mb-4">Version 1.0.0</p>
+                  <p className="text-gray-400 text-sm mb-4">Version {appVersion}</p>
                   <div className="flex items-center justify-center text-purple-400 group-hover:text-purple-300">
                     <Download className="w-4 h-4 mr-2" />
                     <span className="font-semibold">Download .dmg</span>
@@ -331,7 +350,7 @@ export default function DashboardPage() {
                     <Download className="w-8 h-8 text-white" />
                   </div>
                   <h3 className="text-xl font-semibold text-white mb-2">Linux</h3>
-                  <p className="text-gray-400 text-sm mb-4">Version 1.0.0</p>
+                  <p className="text-gray-400 text-sm mb-4">Version {appVersion}</p>
                   <div className="flex items-center justify-center text-purple-400 group-hover:text-purple-300">
                     <Download className="w-4 h-4 mr-2" />
                     <span className="font-semibold">Download .AppImage</span>
