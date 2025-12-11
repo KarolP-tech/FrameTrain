@@ -71,7 +71,8 @@ export function UpdateChecker() {
       console.log('[Updater] Downloading update...');
       
       let totalDownloaded = 0;
-      const contentLength = update.contentLength || 10 * 1024 * 1024; // Fallback: 10MB
+      // Fallback to 10MB if content length unknown
+      const estimatedSize = 10 * 1024 * 1024; // 10MB
       
       await update.downloadAndInstall((event) => {
         switch (event.event) {
@@ -83,7 +84,7 @@ export function UpdateChecker() {
           case 'Progress':
             // Accumulate chunks
             totalDownloaded += event.data.chunkLength || 0;
-            const progress = (totalDownloaded / contentLength) * 100;
+            const progress = (totalDownloaded / estimatedSize) * 100;
             console.log(`[Updater] Download progress: ${progress.toFixed(0)}%`);
             setDownloadProgress(Math.min(progress, 99)); // Cap at 99% until finished
             break;
