@@ -5,6 +5,7 @@ import Login from './components/Login';
 import GlobalTrainingProgress from './components/GlobalTrainingProgress';
 import LoadingScreen from './components/LoadingScreen';
 import FirstLaunchSetup from './components/FirstLaunchSetup';
+import { UpdateChecker } from './components/UpdateChecker';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { NotificationProvider } from './contexts/NotificationContext';
 import './App.css';
@@ -186,6 +187,7 @@ function App() {
               onLogout={handleLogout} 
             />
             <GlobalTrainingProgress />
+            <UpdateChecker />
           </>
         ) : (
           <Login onLogin={handleLogin} />

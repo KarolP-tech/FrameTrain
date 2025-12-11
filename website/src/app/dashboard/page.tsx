@@ -363,8 +363,8 @@ export default function DashboardPage() {
               <p className="text-gray-300 text-sm flex items-start gap-2">
                 <Lightbulb className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
                 <span>
-                  <strong className="text-blue-400">macOS User:</strong> Beim ersten Öffnen erscheint eine Sicherheitswarnung. 
-                  <a href="/install" className="text-purple-400 hover:text-purple-300 underline">Siehe Installations-Guide</a> für Details.
+                  <strong className="text-blue-400"></strong> Beim ersten Öffnen könnte eine Sicherheitswarnung erscheinen. 
+                  <a href="/install" className="text-purple-400 hover:text-purple-300 underline"> Siehe Installations-Guide</a> für Details.
                 </span>
               </p>
             </div>
