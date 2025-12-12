@@ -161,8 +161,8 @@ jobs:
         with:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
-            ./desktop-app2/src-tauri/target/**/release/latest.json
-            ./desktop-app2/src-tauri/target/**/release/latest.json.sig
+            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json
+            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json.sig
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -176,6 +176,8 @@ jobs:
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.exe
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.nsis.zip
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.nsis.zip.sig
+            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json
+            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json.sig
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -189,6 +191,8 @@ jobs:
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.tar.gz
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.tar.gz.sig
             ./desktop-app2/src-tauri/target/**/release/bundle/deb/*.deb
+            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json
+            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json.sig
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
