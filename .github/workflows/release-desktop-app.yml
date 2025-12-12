@@ -152,19 +152,16 @@ jobs:
             ./desktop-app2/src-tauri/target/**/release/bundle/dmg/*.dmg
             ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.app.tar.gz
             ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.app.tar.gz.sig
+            ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.json
+            ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.json.sig
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
       - name: Upload latest.json for Updater (macOS)
         if: matrix.platform == 'macos-latest'
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.create-release.outputs.version }}
-          files: |
-            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json
-            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json.sig
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Updater artifacts are now included in the macOS release assets above"
+          echo "No separate upload needed"
       
       - name: Upload Release Assets (Windows)
         if: matrix.platform == 'windows-latest'
@@ -176,8 +173,8 @@ jobs:
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.exe
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.nsis.zip
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.nsis.zip.sig
-            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json
-            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json.sig
+            ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.json
+            ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.json.sig
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       
@@ -190,9 +187,9 @@ jobs:
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.tar.gz
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.tar.gz.sig
+            ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.json
+            ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.json.sig
             ./desktop-app2/src-tauri/target/**/release/bundle/deb/*.deb
-            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json
-            ./desktop-app2/src-tauri/target/**/release/bundle/updater/*.json.sig
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
