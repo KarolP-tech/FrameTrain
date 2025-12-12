@@ -115,7 +115,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
         
         <div className="space-y-3">
           <a
-            href="https://frametrain.ai/dashboard"
+            href="https://frame-train.vercel.app/dashboard"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-colors group"
@@ -125,7 +125,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
           </a>
 
           <a
-            href="https://frametrain.ai/settings"
+            href="https://frame-train.vercel.app/dashboard"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-colors group"
@@ -266,7 +266,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
           </svg>
         </div>
         <h3 className="text-2xl font-bold text-white mb-2">FrameTrain Desktop</h3>
-        <p className="text-gray-400 mb-4">Version 1.0.0</p>
+        <p className="text-gray-400 mb-4">Version 1.0.9</p>
         <p className="text-sm text-gray-400 max-w-md mx-auto">
           Trainiere Machine Learning Modelle lokal auf deinem Computer mit der Leistung von PyTorch.
         </p>
@@ -277,7 +277,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
         
         <div className="space-y-3">
           <a
-            href="https://frametrain.ai"
+            href="https://frame-train.vercel.app/"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-colors group"
@@ -287,7 +287,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
           </a>
 
           <a
-            href="https://docs.frametrain.ai"
+            href="https://frame-train.vercel.app/docs"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-colors group"
@@ -297,7 +297,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
           </a>
 
           <a
-            href="https://github.com/frametrain"
+            href="https://github.com/KarolP-tech/FrameTrain/releases"
             target="_blank"
             rel="noopener noreferrer"
             className="flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/10 rounded-lg text-white transition-colors group"
