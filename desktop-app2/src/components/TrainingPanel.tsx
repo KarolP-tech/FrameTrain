@@ -975,7 +975,6 @@ export default function TrainingPanel() {
   const [validationIssues, setValidationIssues] = useState<{field: string, value: any, defaultValue: any, reason: string}[]>([]);
 
   // ============ Load Data ============
-
   useEffect(() => {
     loadInitialData();
   }, []);
@@ -986,19 +985,23 @@ export default function TrainingPanel() {
       
       // Update version selection when model changes
       const modelWithVersions = modelsWithVersions.find(m => m.id === selectedModelId);
+
       if (modelWithVersions && modelWithVersions.versions.length > 0) {
-        // Try to select root version
-        const rootVersion = modelWithVersions.versions.find(v => v.is_root);
-        if (rootVersion) {
-          setSelectedVersionId(rootVersion.id);
-        } else {
-          setSelectedVersionId(modelWithVersions.versions[0].id);
-        }
+
+        // ✨ Neue Logik: Neueste Version automatisch auswählen
+        const sortedVersions = [...modelWithVersions.versions].sort(
+          (a, b) => b.version_number - a.version_number
+        );
+        const newestVersion = sortedVersions[0];
+
+        setSelectedVersionId(newestVersion?.id || null);
         setShowVersions(true);
+
       } else {
         setSelectedVersionId(null);
         setShowVersions(false);
       }
+
     } else {
       setDatasets([]);
       setSelectedDatasetId(null);
@@ -1010,7 +1013,6 @@ export default function TrainingPanel() {
   const selectedModel = models.find((m) => m.id === selectedModelId);
   const selectedDataset = datasets.find((d) => d.id === selectedDatasetId);
   const isTraining = currentJob?.status === 'running' || currentJob?.status === 'pending';
-
 
   // Rate config when it changes
   useEffect(() => {

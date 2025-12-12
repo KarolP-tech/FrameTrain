@@ -33,7 +33,7 @@ import { invoke } from '@tauri-apps/api/core';
  * - Lavender Dream: Sanftes Lavendel und Violett
  */
 
-export type ThemeId = 'purple-passion' | 'ocean-breeze' | 'forest-green' | 'sunset-orange' | 'midnight-blue' | 'rose-gold' | 'dark-minimal' | 'cyber-yellow' | 'arctic-white' | 'neon-pink' | 'blood-red' | 'toxic-green' | 'golden-hour' | 'monochrome' | 'lavender-dream' | 'fire-ice';
+export type ThemeId = 'purple-passion' | 'ocean-breeze' | 'forest-green' | 'sunset-orange' | 'midnight-blue' | 'rose-gold' | 'dark-minimal' | 'cyber-yellow' | 'arctic-white' | 'neon-pink' | 'blood-red' | 'toxic-green' | 'golden-hour' | 'monochrome' | 'lavender-dream' | 'fire-ice' | 'light-gray' | 'pure-white';
 
 export interface Theme {
   id: ThemeId;
@@ -307,6 +307,38 @@ export const themes: Record<ThemeId, Theme> = {
       textSecondary: '#94a3b8',
       border: 'border-white/10',
       gradient: 'from-orange-500 via-red-500 to-cyan-500',
+    },
+  },
+  'light-gray': {
+    id: 'light-gray',
+    name: 'Light Gray',
+    description: 'Helles neutrales Grau',
+    colors: {
+      primary: '#64748b',
+      secondary: '#94a3b8',
+      accent: '#475569',
+      background: 'from-gray-100 via-slate-200 to-gray-100',
+      surface: 'bg-white/80',
+      text: '#0f172a',
+      textSecondary: '#64748b',
+      border: 'border-slate-300',
+      gradient: 'from-slate-400 to-gray-500',
+    },
+  },
+  'pure-white': {
+    id: 'pure-white',
+    name: 'Pure White',
+    description: 'Klares helles Weiß Theme',
+    colors: {
+      primary: '#2563eb',
+      secondary: '#3b82f6',
+      accent: '#60a5fa',
+      background: 'from-white via-gray-50 to-white',
+      surface: 'bg-white',
+      text: '#111827',
+      textSecondary: '#6b7280',
+      border: 'border-gray-200',
+      gradient: 'from-blue-500 to-indigo-500',
     },
   },
 };

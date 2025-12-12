@@ -384,7 +384,6 @@ export default function AnalysisPanel() {
   const [loadingAnalysis, setLoadingAnalysis] = useState(false);
 
   // ============ Load Data ============
-
   useEffect(() => {
     loadModels();
   }, []);
@@ -392,17 +391,19 @@ export default function AnalysisPanel() {
   useEffect(() => {
     if (selectedModelId) {
       const model = modelsWithVersions.find(m => m.id === selectedModelId);
+
       if (model && model.versions.length > 0) {
-        // Try to select root version
-        const rootVersion = model.versions.find(v => v.is_root);
-        if (rootVersion) {
-          setSelectedVersionId(rootVersion.id);
-        } else {
-          setSelectedVersionId(model.versions[0].id);
-        }
+        // ✨ Neue Logik: Neueste Version automatisch wählen
+        const sortedVersions = [...model.versions].sort(
+          (a, b) => b.version_number - a.version_number
+        );
+
+        const newestVersion = sortedVersions[0];
+        setSelectedVersionId(newestVersion?.id || null);
       } else {
         setSelectedVersionId(null);
       }
+
     } else {
       setSelectedVersionId(null);
     }

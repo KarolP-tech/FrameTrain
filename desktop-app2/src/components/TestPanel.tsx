@@ -134,8 +134,7 @@ export default function TestPanel() {
   const [minLoss, setMinLoss] = useState<number>(0);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // ============ Load Data ============
-
+    // ============ Load Data ============
   useEffect(() => {
     loadInitialData();
     checkForActiveTest();
@@ -147,12 +146,19 @@ export default function TestPanel() {
       loadDatasets(selectedModelId);
       
       const model = modelsWithVersions.find(m => m.id === selectedModelId);
+
       if (model && model.versions.length > 0) {
-        const rootVersion = model.versions.find(v => v.is_root);
-        setSelectedVersionId(rootVersion ? rootVersion.id : model.versions[0].id);
+
+        // ✨ Neue Logik: neueste Version anhand version_number auswählen
+        const sortedVersions = [...model.versions].sort(
+          (a, b) => b.version_number - a.version_number
+        );
+        const newestVersion = sortedVersions[0];
+
+        setSelectedVersionId(newestVersion?.id || null);
       }
     }
-  }, [selectedModelId]);
+  }, [selectedModelId, modelsWithVersions]);
 
   const loadInitialData = async () => {
     try {
