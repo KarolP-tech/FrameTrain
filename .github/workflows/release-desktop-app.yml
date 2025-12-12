@@ -137,10 +137,9 @@ jobs:
       
       - name: Create update packages manually (macOS)
         if: matrix.platform == 'macos-latest'
-        working-directory: ./desktop-app2/src-tauri/target/aarch64-apple-darwin/release/bundle
         run: |
           echo "Creating macOS update package..."
-          cd macos
+          cd desktop-app2/src-tauri/target/aarch64-apple-darwin/release/bundle/macos
           APP_BUNDLE=$(find . -maxdepth 1 -name "*.app" -type d | head -n 1)
           if [ -n "$APP_BUNDLE" ]; then
             echo "Found app bundle: $APP_BUNDLE"
@@ -156,10 +155,9 @@ jobs:
       
       - name: Create update packages manually (Windows)
         if: matrix.platform == 'windows-latest'
-        working-directory: ./desktop-app2/src-tauri/target/x86_64-pc-windows-msvc/release/bundle
         run: |
           Write-Host "Creating Windows update package..."
-          cd nsis
+          cd desktop-app2\src-tauri\target\x86_64-pc-windows-msvc\release\bundle\nsis
           $SetupExe = Get-ChildItem -Filter "*-setup.exe" | Select-Object -First 1
           if ($SetupExe) {
             Write-Host "Found setup exe: $($SetupExe.Name)"
@@ -176,10 +174,9 @@ jobs:
       
       - name: Create update packages manually (Linux)
         if: matrix.platform == 'ubuntu-22.04'
-        working-directory: ./desktop-app2/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle
         run: |
           echo "Creating Linux update package..."
-          cd appimage
+          cd desktop-app2/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage
           APPIMAGE=$(find . -maxdepth 1 -name "*.AppImage" -type f ! -name "*.tar.gz" | head -n 1)
           if [ -n "$APPIMAGE" ]; then
             echo "Found AppImage: $APPIMAGE"
