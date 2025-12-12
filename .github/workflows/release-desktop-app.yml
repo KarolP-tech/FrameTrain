@@ -195,21 +195,21 @@ jobs:
           mkdir -p release-temp
           cat <<EOF > release-temp/latest.json
           {
-            "version": "${{ needs.create-release.outputs.version }}",
+            "version": "v${{ needs.create-release.outputs.version }}",
             "notes": "Auto-generated release notes for v${{ needs.create-release.outputs.version }}",
             "pub_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "platforms": {
               "darwin-aarch64": {
                 "signature": "",
-                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_aarch64.dmg"
+                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2.app.tar.gz"
               },
               "windows-x86_64": {
                 "signature": "",
-                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_x64-setup.exe"
+                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_x64-setup.nsis.zip"
               },
               "linux-x86_64": {
                 "signature": "",
-                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_amd64.AppImage"
+                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_amd64.AppImage.tar.gz"
               }
             }
           }
