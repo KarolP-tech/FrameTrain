@@ -134,13 +134,64 @@ jobs:
         run: npm run tauri:build -- ${{ matrix.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       
-      - name: List all files in target directory (Debug)
+      - name: Create update packages manually (macOS)
+        if: matrix.platform == 'macos-latest'
+        working-directory: ./desktop-app2/src-tauri/target/aarch64-apple-darwin/release/bundle
         run: |
-          echo "=== Listing all bundle files ==="
-          ls -R ./desktop-app2/src-tauri/target/ || true
+          echo "Creating macOS update package..."
+          cd macos
+          APP_BUNDLE=$(find . -maxdepth 1 -name "*.app" -type d | head -n 1)
+          if [ -n "$APP_BUNDLE" ]; then
+            echo "Found app bundle: $APP_BUNDLE"
+            tar -czf "FrameTrain.2.app.tar.gz" "$APP_BUNDLE"
+            echo "Created FrameTrain.2.app.tar.gz"
+            ls -lh FrameTrain.2.app.tar.gz
+          else
+            echo "ERROR: No .app bundle found!"
+            ls -la
+            exit 1
+          fi
+        shell: bash
+      
+      - name: Create update packages manually (Windows)
+        if: matrix.platform == 'windows-latest'
+        working-directory: ./desktop-app2/src-tauri/target/x86_64-pc-windows-msvc/release/bundle
+        run: |
+          Write-Host "Creating Windows update package..."
+          cd nsis
+          $SetupExe = Get-ChildItem -Filter "*-setup.exe" | Select-Object -First 1
+          if ($SetupExe) {
+            Write-Host "Found setup exe: $($SetupExe.Name)"
+            $ZipName = $SetupExe.Name -replace '-setup\.exe$', '-setup.nsis.zip'
+            Compress-Archive -Path $SetupExe.Name -DestinationPath $ZipName -Force
+            Write-Host "Created $ZipName"
+            Get-ChildItem $ZipName | Format-List Name, Length
+          } else {
+            Write-Host "ERROR: No setup.exe found!"
+            Get-ChildItem
+            exit 1
+          }
+        shell: pwsh
+      
+      - name: Create update packages manually (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        working-directory: ./desktop-app2/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle
+        run: |
+          echo "Creating Linux update package..."
+          cd appimage
+          APPIMAGE=$(find . -maxdepth 1 -name "*.AppImage" -type f ! -name "*.tar.gz" | head -n 1)
+          if [ -n "$APPIMAGE" ]; then
+            echo "Found AppImage: $APPIMAGE"
+            APPIMAGE_NAME=$(basename "$APPIMAGE")
+            tar -czf "${APPIMAGE_NAME}.tar.gz" "$APPIMAGE_NAME"
+            echo "Created ${APPIMAGE_NAME}.tar.gz"
+            ls -lh "${APPIMAGE_NAME}.tar.gz"
+          else
+            echo "ERROR: No AppImage found!"
+            ls -la
+            exit 1
+          fi
         shell: bash
       
       - name: Upload Release Assets (macOS)
@@ -151,7 +202,6 @@ jobs:
           files: |
             ./desktop-app2/src-tauri/target/**/release/bundle/dmg/*.dmg
             ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.app.tar.gz
-            ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.json
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -165,7 +215,6 @@ jobs:
             ./desktop-app2/src-tauri/target/**/release/bundle/msi/*.msi
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.exe
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.nsis.zip
-            ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.json
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -178,7 +227,6 @@ jobs:
           files: |
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.tar.gz
-            ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.json
             ./desktop-app2/src-tauri/target/**/release/bundle/deb/*.deb
           fail_on_unmatched_files: false
         env:

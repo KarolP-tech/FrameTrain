@@ -266,7 +266,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
           </svg>
         </div>
         <h3 className="text-2xl font-bold text-white mb-2">FrameTrain Desktop</h3>
-        <p className="text-gray-400 mb-4">Version 1.0.11</p>
+        <p className="text-gray-400 mb-4">Version 1.0.12</p>
         <p className="text-sm text-gray-400 max-w-md mx-auto">
           Trainiere Machine Learning Modelle lokal auf deinem Computer mit der Leistung von PyTorch.
         </p>
