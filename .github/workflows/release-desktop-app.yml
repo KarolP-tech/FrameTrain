@@ -139,8 +139,20 @@ jobs:
         if: matrix.platform == 'macos-latest'
         run: |
           echo "Creating macOS update package..."
-          cd desktop-app2/src-tauri/target/aarch64-apple-darwin/release/bundle/macos
+
+          MACOS_DIR=$(find desktop-app2/src-tauri/target -type d -path "*/bundle/macos" | head -n 1)
+
+          if [ -z "$MACOS_DIR" ]; then
+            echo "ERROR: macOS bundle directory not found!"
+            find desktop-app2/src-tauri/target -maxdepth 5 -type d
+            exit 1
+          fi
+
+          echo "Found macOS bundle directory: $MACOS_DIR"
+          cd "$MACOS_DIR"
+
           APP_BUNDLE=$(find . -maxdepth 1 -name "*.app" -type d | head -n 1)
+
           if [ -n "$APP_BUNDLE" ]; then
             echo "Found app bundle: $APP_BUNDLE"
             tar -czf "FrameTrain.2.app.tar.gz" "$APP_BUNDLE"
@@ -155,10 +167,27 @@ jobs:
       
       - name: Create update packages manually (Windows)
         if: matrix.platform == 'windows-latest'
+        shell: pwsh
         run: |
           Write-Host "Creating Windows update package..."
-          cd desktop-app2\src-tauri\target\x86_64-pc-windows-msvc\release\bundle\nsis
+
+          # Suche das nsis Verzeichnis dynamisch
+          $nsisDir = Get-ChildItem -Path "desktop-app2\src-tauri\target" -Directory -Recurse |
+            Where-Object { $_.FullName -match "bundle\\nsis$" } |
+            Select-Object -First 1
+
+          if (-not $nsisDir) {
+            Write-Host "ERROR: NSIS bundle directory not found!"
+            Get-ChildItem -Path "desktop-app2\src-tauri\target" -Recurse
+            exit 1
+          }
+
+          Write-Host "Found NSIS directory: $($nsisDir.FullName)"
+          Set-Location $nsisDir.FullName
+
+          # Setup-Installer finden
           $SetupExe = Get-ChildItem -Filter "*-setup.exe" | Select-Object -First 1
+
           if ($SetupExe) {
             Write-Host "Found setup exe: $($SetupExe.Name)"
             $ZipName = $SetupExe.Name -replace '-setup\.exe$', '-setup.nsis.zip'
@@ -170,14 +199,26 @@ jobs:
             Get-ChildItem
             exit 1
           }
-        shell: pwsh
       
       - name: Create update packages manually (Linux)
         if: matrix.platform == 'ubuntu-22.04'
+        shell: bash
         run: |
           echo "Creating Linux update package..."
-          cd desktop-app2/src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage
+
+          APPDIR=$(find desktop-app2/src-tauri/target -type d -path "*/bundle/appimage" | head -n 1)
+
+          if [ -z "$APPDIR" ]; then
+            echo "ERROR: AppImage directory not found!"
+            find desktop-app2/src-tauri/target -maxdepth 5 -type d
+            exit 1
+          fi
+
+          echo "Found AppImage directory: $APPDIR"
+          cd "$APPDIR"
+
           APPIMAGE=$(find . -maxdepth 1 -name "*.AppImage" -type f ! -name "*.tar.gz" | head -n 1)
+
           if [ -n "$APPIMAGE" ]; then
             echo "Found AppImage: $APPIMAGE"
             APPIMAGE_NAME=$(basename "$APPIMAGE")
@@ -189,7 +230,6 @@ jobs:
             ls -la
             exit 1
           fi
-        shell: bash
       
       - name: Upload Release Assets (macOS)
         if: matrix.platform == 'macos-latest'
