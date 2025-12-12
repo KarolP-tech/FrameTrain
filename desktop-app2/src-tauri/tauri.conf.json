@@ -41,15 +41,16 @@
     }
   },
   "plugins": {
-    "fs": {
-      "requireLiteralLeadingDot": true
-    },
-    "updater": {
-      "active": true,
-      "endpoints": [
-        "https://github.com/KarolP-tech/FrameTrain/releases/latest/download/latest.json"
-      ],
-      "dialog": false
+  "fs": {
+    "requireLiteralLeadingDot": true
+  },
+  "updater": {
+    "active": true,
+    "endpoints": [
+      "https://github.com/KarolP-tech/FrameTrain/releases/latest/download/latest.json"
+    ],
+    "dialog": false,
+    "pubkey": "untrusted comment: minisign public key: A7821CEAEB757028\nRWQocHXr6hyCp/NKTZC1eqnym8TAIswfaZZDCZrrY41z0S9fsDbosSqx"
     }
   }
 }
