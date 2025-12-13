@@ -34,8 +34,14 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
 
   useEffect(() => {
     loadAppVersion();
-    checkForUpdates();
   }, []);
+
+  // Automatically check for updates after version is loaded
+  useEffect(() => {
+    if (appVersion !== 'Loading...' && appVersion !== 'Unknown') {
+      checkForUpdates();
+    }
+  }, [appVersion]);
 
   const logToFile = async (message: string) => {
     const timestamp = new Date().toISOString();
@@ -48,9 +54,11 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
     try {
       const version = await getVersion();
       setAppVersion(version);
+      await logToFile(`App version loaded: ${version}`);
     } catch (error) {
       console.error('Failed to load app version:', error);
       setAppVersion('Unknown');
+      await logToFile('Failed to load app version');
     }
   };
 
@@ -68,14 +76,14 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
       
       const update = await check();
       
-      await logToFile(`Check result: ${JSON.stringify(update)}`);
+      await logToFile(`Check result: ${update ? JSON.stringify(update) : 'null'}`);
       console.log('[Settings/Updates] Check result:', update);
       
-      if (update) {
+      if (update && update.version) {
         await logToFile('✅ Update available!');
         await logToFile(`New version: ${update.version}`);
-        await logToFile(`Date: ${update.date}`);
-        await logToFile(`Body: ${update.body}`);
+        await logToFile(`Date: ${update.date || 'N/A'}`);
+        await logToFile(`Body: ${update.body || 'No description'}`);
         await logToFile('========================================');
         
         console.log('[Settings/Updates] ✅ Update available!');
@@ -87,7 +95,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
         setNotification({ type: 'success', message: `Update verfügbar: ${update.version}` });
         setTimeout(() => setNotification(null), 3000);
       } else {
-        await logToFile('ℹ️ No updates available');
+        await logToFile('ℹ️ No updates available (update is null or has no version)');
         await logToFile('========================================');
         
         console.log('[Settings/Updates] ℹ️ No updates available');
@@ -98,7 +106,9 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
         setTimeout(() => setNotification(null), 3000);
       }
     } catch (error) {
-      await logToFile(`❌ Error: ${error}`);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      await logToFile(`❌ Error: ${errorMessage}`);
+      await logToFile(`Error stack: ${error instanceof Error && error.stack ? error.stack : 'No stack trace'}`);
       await logToFile(`Error details: ${JSON.stringify(error, null, 2)}`);
       await logToFile('========================================');
       
@@ -106,8 +116,8 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
       console.error('[Settings/Updates] Error details:', JSON.stringify(error, null, 2));
       console.error('[Settings/Updates] ========================================');
       
-      setNotification({ type: 'error', message: 'Fehler beim Prüfen auf Updates' });
-      setTimeout(() => setNotification(null), 3000);
+      setNotification({ type: 'error', message: `Fehler: ${errorMessage}` });
+      setTimeout(() => setNotification(null), 5000);
     } finally {
       setCheckingForUpdates(false);
     }
@@ -120,10 +130,15 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
     setDownloadProgress(0);
 
     try {
+      await logToFile('========================================');
+      await logToFile('Starting update installation...');
+      
       const update = await check();
       if (!update) {
         throw new Error('Update nicht mehr verfügbar');
       }
+
+      await logToFile(`Downloading update: ${update.version}`);
 
       let totalDownloaded = 0;
       const estimatedSize = 10 * 1024 * 1024;
@@ -133,6 +148,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
           case 'Started':
             setDownloadProgress(0);
             totalDownloaded = 0;
+            logToFile('Download started');
             break;
           case 'Progress':
             totalDownloaded += event.data.chunkLength || 0;
@@ -141,13 +157,19 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
             break;
           case 'Finished':
             setDownloadProgress(100);
+            logToFile('Download finished');
             break;
         }
       });
 
+      await logToFile('Update installed successfully. Relaunching app...');
+      await logToFile('========================================');
       await relaunch();
     } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Failed to install update:', error);
+      await logToFile(`❌ Update installation failed: ${errorMessage}`);
+      await logToFile('========================================');
       setNotification({ type: 'error', message: 'Fehler beim Installieren des Updates' });
       setTimeout(() => setNotification(null), 3000);
       setIsDownloading(false);
@@ -401,7 +423,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
               <span className="text-green-400 text-sm font-medium">Update verfügbar</span>
             </div>
           )}
-          {!updateAvailable && !checkingForUpdates && (
+          {!updateAvailable && !checkingForUpdates && appVersion !== 'Loading...' && (
             <div className="px-3 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full">
               <span className="text-purple-400 text-sm font-medium">✓ Aktuell</span>
             </div>
