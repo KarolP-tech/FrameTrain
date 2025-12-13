@@ -4,7 +4,6 @@ import { useTheme, ThemeId } from '../contexts/ThemeContext';
 import { getVersion } from '@tauri-apps/api/app';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
-import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 
 interface UserData {
   apiKey: string;
@@ -31,6 +30,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
   const [checkingForUpdates, setCheckingForUpdates] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  const [updateLogs, setUpdateLogs] = useState<string[]>([]);
 
   useEffect(() => {
     loadAppVersion();
@@ -38,16 +38,10 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
   }, []);
 
   const logToFile = async (message: string) => {
-    try {
-      const timestamp = new Date().toISOString();
-      const logLine = `[${timestamp}] ${message}\n`;
-      await writeTextFile('frametrain-update.log', logLine, { 
-        baseDir: BaseDirectory.AppLog,
-        append: true 
-      });
-    } catch (error) {
-      console.error('Failed to write log:', error);
-    }
+    const timestamp = new Date().toISOString();
+    const logLine = `[${timestamp.split('T')[1].split('.')[0]}] ${message}`;
+    setUpdateLogs(prev => [...prev, logLine]);
+    console.log('[UpdateLog]', logLine);
   };
 
   const loadAppVersion = async () => {
@@ -484,33 +478,44 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
         </button>
       </div>
 
+      {/* Update Logs */}
+      <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Update-Logs</h3>
+          <button
+            onClick={() => setUpdateLogs([])}
+            className="px-3 py-1 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-sm transition-colors"
+          >
+            Logs löschen
+          </button>
+        </div>
+        
+        <div className="bg-black/30 border border-white/10 rounded-lg p-4 font-mono text-xs max-h-64 overflow-y-auto">
+          {updateLogs.length === 0 ? (
+            <div className="text-gray-500 text-center py-4">
+              Keine Logs verfügbar. Klicke auf "Nach Updates suchen" um Logs zu sehen.
+            </div>
+          ) : (
+            updateLogs.map((log, index) => (
+              <div key={index} className="text-gray-300 mb-1">
+                {log}
+              </div>
+            ))
+          )}
+        </div>
+        
+        <p className="text-xs text-gray-500 mt-2">
+          💡 Diese Logs helfen beim Debuggen von Update-Problemen
+        </p>
+      </div>
+
       {/* Auto-Update Info */}
       <div className="bg-white/5 rounded-xl p-6 border border-white/10">
         <h3 className="text-lg font-semibold text-white mb-4">Automatische Updates</h3>
-        <p className="text-gray-400 text-sm mb-4">
+        <p className="text-gray-400 text-sm">
           FrameTrain prüft automatisch beim Start auf neue Versionen. Du wirst benachrichtigt, 
           wenn ein Update verfügbar ist.
         </p>
-        
-        <div className="pt-4 border-t border-white/10">
-          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-            <div className="flex items-start gap-3">
-              <div className="text-2xl">📄</div>
-              <div className="flex-1">
-                <div className="text-white font-medium mb-1">Update-Logs</div>
-                <div className="text-sm text-gray-400 mb-2">
-                  Logs werden hier gespeichert:
-                </div>
-                <div className="px-3 py-2 bg-white/5 rounded border border-white/10 font-mono text-xs text-gray-300 break-all">
-                  ~/Library/Logs/com.frametrain.desktop2/frametrain-update.log
-                </div>
-                <p className="text-xs text-gray-500 mt-2">
-                  💡 Tipp: Öffne den Finder, drücke Cmd+Shift+G und füge den Pfad ein
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
