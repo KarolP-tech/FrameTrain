@@ -28,11 +28,22 @@ export function UpdateChecker() {
     setError(null);
     
     try {
+      console.log('[Updater] ========================================');
       console.log('[Updater] Checking for updates...');
+      console.log('[Updater] Endpoint: https://github.com/KarolP-tech/FrameTrain/releases/latest/download/latest.json');
+      
       const update = await check();
 
+      console.log('[Updater] Check result:', update);
+
       if (update) {
-        console.log('[Updater] Update available:', update.version);
+        console.log('[Updater] ✅ Update available!');
+        console.log('[Updater] Current version: (checking...)');
+        console.log('[Updater] New version:', update.version);
+        console.log('[Updater] Release date:', update.date);
+        console.log('[Updater] Release notes:', update.body);
+        console.log('[Updater] ========================================');
+        
         setUpdateInfo({
           version: update.version,
           date: update.date,
@@ -41,11 +52,14 @@ export function UpdateChecker() {
         setUpdateAvailable(true);
         setShowModal(true);
       } else {
-        console.log('[Updater] No updates available');
+        console.log('[Updater] ℹ️ No updates available - you are on the latest version');
+        console.log('[Updater] ========================================');
         setUpdateAvailable(false);
       }
     } catch (err) {
-      console.error('[Updater] Error checking for updates:', err);
+      console.error('[Updater] ❌ Error checking for updates:', err);
+      console.error('[Updater] Error details:', JSON.stringify(err, null, 2));
+      console.error('[Updater] ========================================');
       setError(err instanceof Error ? err.message : 'Fehler beim Prüfen auf Updates');
     } finally {
       setCheckingForUpdates(false);

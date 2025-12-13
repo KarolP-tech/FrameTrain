@@ -49,15 +49,38 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
   const checkForUpdates = async () => {
     setCheckingForUpdates(true);
     try {
+      console.log('[Settings/Updates] ========================================'  );
+      console.log('[Settings/Updates] Checking for updates...');
+      console.log('[Settings/Updates] Current version:', appVersion);
+      
       const update = await check();
+      
+      console.log('[Settings/Updates] Check result:', update);
+      
       if (update) {
+        console.log('[Settings/Updates] ✅ Update available!');
+        console.log('[Settings/Updates] New version:', update.version);
+        console.log('[Settings/Updates] ========================================');
+        
         setUpdateAvailable(true);
         setUpdateVersion(update.version);
+        setNotification({ type: 'success', message: `Update verfügbar: ${update.version}` });
+        setTimeout(() => setNotification(null), 3000);
       } else {
+        console.log('[Settings/Updates] ℹ️ No updates available');
+        console.log('[Settings/Updates] ========================================');
+        
         setUpdateAvailable(false);
+        setNotification({ type: 'success', message: 'Du bist auf dem neuesten Stand!' });
+        setTimeout(() => setNotification(null), 3000);
       }
     } catch (error) {
-      console.error('Failed to check for updates:', error);
+      console.error('[Settings/Updates] ❌ Error checking for updates:', error);
+      console.error('[Settings/Updates] Error details:', JSON.stringify(error, null, 2));
+      console.error('[Settings/Updates] ========================================');
+      
+      setNotification({ type: 'error', message: 'Fehler beim Prüfen auf Updates' });
+      setTimeout(() => setNotification(null), 3000);
     } finally {
       setCheckingForUpdates(false);
     }
