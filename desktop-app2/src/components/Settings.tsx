@@ -1,6 +1,9 @@
-import { useState } from 'react';
-import { User, Key, Shield, Bell, Palette, Info, ExternalLink, LogOut, AlertCircle, CheckCircle, Check } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Key, Shield, Bell, Palette, Info, ExternalLink, LogOut, AlertCircle, CheckCircle, Check, Download } from 'lucide-react';
 import { useTheme, ThemeId } from '../contexts/ThemeContext';
+import { getVersion } from '@tauri-apps/api/app';
+import { check } from '@tauri-apps/plugin-updater';
+import { relaunch } from '@tauri-apps/plugin-process';
 
 interface UserData {
   apiKey: string;
@@ -14,18 +17,98 @@ interface SettingsProps {
   onLogout: () => void;
 }
 
-type SettingsTab = 'account' | 'appearance' | 'notifications' | 'about';
+type SettingsTab = 'account' | 'appearance' | 'notifications' | 'updates' | 'about';
 
 export default function Settings({ userData, onLogout }: SettingsProps) {
   const [activeTab, setActiveTab] = useState<SettingsTab>('account');
   const [showApiKey, setShowApiKey] = useState(false);
   const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const { currentTheme, setTheme, themes: allThemes } = useTheme();
+  const [appVersion, setAppVersion] = useState<string>('Loading...');
+  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [updateVersion, setUpdateVersion] = useState<string>('');
+  const [checkingForUpdates, setCheckingForUpdates] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+
+  useEffect(() => {
+    loadAppVersion();
+    checkForUpdates();
+  }, []);
+
+  const loadAppVersion = async () => {
+    try {
+      const version = await getVersion();
+      setAppVersion(version);
+    } catch (error) {
+      console.error('Failed to load app version:', error);
+      setAppVersion('Unknown');
+    }
+  };
+
+  const checkForUpdates = async () => {
+    setCheckingForUpdates(true);
+    try {
+      const update = await check();
+      if (update) {
+        setUpdateAvailable(true);
+        setUpdateVersion(update.version);
+      } else {
+        setUpdateAvailable(false);
+      }
+    } catch (error) {
+      console.error('Failed to check for updates:', error);
+    } finally {
+      setCheckingForUpdates(false);
+    }
+  };
+
+  const installUpdate = async () => {
+    if (!updateAvailable) return;
+
+    setIsDownloading(true);
+    setDownloadProgress(0);
+
+    try {
+      const update = await check();
+      if (!update) {
+        throw new Error('Update nicht mehr verfügbar');
+      }
+
+      let totalDownloaded = 0;
+      const estimatedSize = 10 * 1024 * 1024;
+
+      await update.downloadAndInstall((event) => {
+        switch (event.event) {
+          case 'Started':
+            setDownloadProgress(0);
+            totalDownloaded = 0;
+            break;
+          case 'Progress':
+            totalDownloaded += event.data.chunkLength || 0;
+            const progress = (totalDownloaded / estimatedSize) * 100;
+            setDownloadProgress(Math.min(progress, 99));
+            break;
+          case 'Finished':
+            setDownloadProgress(100);
+            break;
+        }
+      });
+
+      await relaunch();
+    } catch (error) {
+      console.error('Failed to install update:', error);
+      setNotification({ type: 'error', message: 'Fehler beim Installieren des Updates' });
+      setTimeout(() => setNotification(null), 3000);
+      setIsDownloading(false);
+    }
+  };
 
   const tabs = [
     { id: 'account' as SettingsTab, label: 'Konto', icon: User },
     { id: 'appearance' as SettingsTab, label: 'Darstellung', icon: Palette },
     { id: 'notifications' as SettingsTab, label: 'Benachrichtigungen', icon: Bell },
+    { id: 'updates' as SettingsTab, label: 'Updates', icon: Download },
     { id: 'about' as SettingsTab, label: 'Über', icon: Info },
   ];
 
@@ -247,6 +330,115 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
     </div>
   );
 
+  const renderUpdatesTab = () => (
+    <div className="space-y-6">
+      {/* Current Version Card */}
+      <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold text-white">Aktuelle Version</h3>
+          <Download className="w-5 h-5 text-purple-400" />
+        </div>
+        
+        <div className="flex items-center justify-between p-4 bg-white/5 border border-white/10 rounded-lg">
+          <div>
+            <div className="text-white font-semibold text-lg">FrameTrain Desktop {appVersion}</div>
+            <div className="text-sm text-gray-400 mt-1">
+              {updateAvailable ? 'Update verfügbar' : 'Du bist auf dem neuesten Stand'}
+            </div>
+          </div>
+          {updateAvailable && (
+            <div className="px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full">
+              <span className="text-green-400 text-sm font-medium">Update verfügbar</span>
+            </div>
+          )}
+          {!updateAvailable && !checkingForUpdates && (
+            <div className="px-3 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full">
+              <span className="text-purple-400 text-sm font-medium">✓ Aktuell</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Update Available Card */}
+      {updateAvailable && (
+        <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <Download className="w-6 h-6 text-white" />
+            </div>
+            <div className="flex-1">
+              <h3 className="text-xl font-bold text-white mb-2">Neue Version verfügbar!</h3>
+              <p className="text-gray-300 mb-4">
+                Version <span className="font-semibold text-purple-400">{updateVersion}</span> ist jetzt verfügbar. 
+                Aktualisiere, um die neuesten Features und Verbesserungen zu erhalten.
+              </p>
+              
+              {isDownloading ? (
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-gray-300">Download läuft...</span>
+                    <span className="text-purple-400 font-semibold">{downloadProgress.toFixed(0)}%</span>
+                  </div>
+                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
+                      style={{ width: `${downloadProgress}%` }}
+                    />
+                  </div>
+                  <p className="text-gray-400 text-xs">
+                    Die App wird nach dem Download automatisch neu gestartet.
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={installUpdate}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold transition-all flex items-center gap-2"
+                >
+                  <Download className="w-5 h-5" />
+                  <span>Jetzt aktualisieren</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Check for Updates Button */}
+      <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+        <h3 className="text-lg font-semibold text-white mb-4">Nach Updates suchen</h3>
+        <p className="text-gray-400 mb-4 text-sm">
+          Prüfe manuell, ob eine neue Version von FrameTrain verfügbar ist.
+        </p>
+        <button
+          onClick={checkForUpdates}
+          disabled={checkingForUpdates || isDownloading}
+          className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        >
+          {checkingForUpdates ? (
+            <>
+              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              <span>Prüfe...</span>
+            </>
+          ) : (
+            <>
+              <Download className="w-4 h-4" />
+              <span>Nach Updates suchen</span>
+            </>
+          )}
+        </button>
+      </div>
+
+      {/* Auto-Update Info */}
+      <div className="bg-white/5 rounded-xl p-6 border border-white/10">
+        <h3 className="text-lg font-semibold text-white mb-4">Automatische Updates</h3>
+        <p className="text-gray-400 text-sm">
+          FrameTrain prüft automatisch beim Start auf neue Versionen. Du wirst benachrichtigt, 
+          wenn ein Update verfügbar ist.
+        </p>
+      </div>
+    </div>
+  );
+
   const renderAboutTab = () => (
     <div className="space-y-6">
       <div className="bg-white/5 rounded-xl p-6 border border-white/10 text-center">
@@ -266,7 +458,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
           </svg>
         </div>
         <h3 className="text-2xl font-bold text-white mb-2">FrameTrain Desktop</h3>
-        <p className="text-gray-400 mb-4">Version 1.0.12</p>
+        <p className="text-gray-400 mb-4">Version {appVersion}</p>
         <p className="text-sm text-gray-400 max-w-md mx-auto">
           Trainiere Machine Learning Modelle lokal auf deinem Computer mit der Leistung von PyTorch.
         </p>
@@ -373,6 +565,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
           {activeTab === 'account' && renderAccountTab()}
           {activeTab === 'appearance' && renderAppearanceTab()}
           {activeTab === 'notifications' && renderNotificationsTab()}
+          {activeTab === 'updates' && renderUpdatesTab()}
           {activeTab === 'about' && renderAboutTab()}
         </div>
       </div>
