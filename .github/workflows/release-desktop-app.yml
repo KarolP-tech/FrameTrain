@@ -280,7 +280,7 @@ jobs:
           mkdir -p release-temp
           cat <<EOF > release-temp/latest.json
           {
-            "version": "v${{ needs.create-release.outputs.version }}",
+            "version": "${{ needs.create-release.outputs.version }}",
             "notes": "Auto-generated release notes for v${{ needs.create-release.outputs.version }}",
             "pub_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "platforms": {
