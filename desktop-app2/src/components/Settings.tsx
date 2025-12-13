@@ -42,7 +42,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
       const timestamp = new Date().toISOString();
       const logLine = `[${timestamp}] ${message}\n`;
       await writeTextFile('frametrain-update.log', logLine, { 
-        dir: BaseDirectory.AppLog,
+        baseDir: BaseDirectory.AppLog,
         append: true 
       });
     } catch (error) {
@@ -492,23 +492,24 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
           wenn ein Update verfügbar ist.
         </p>
         
-        <div className="flex items-center gap-3 pt-4 border-t border-white/10">
-          <button
-            onClick={async () => {
-              try {
-                const { open } = await import('@tauri-apps/plugin-shell');
-                await open('~/Library/Logs/com.frametrain.desktop2/');
-              } catch (error) {
-                console.error('Failed to open logs:', error);
-              }
-            }}
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg font-medium transition-colors text-sm"
-          >
-            📄 Log-Datei öffnen
-          </button>
-          <span className="text-xs text-gray-500">
-            Logs werden hier gespeichert: ~/Library/Logs/com.frametrain.desktop2/
-          </span>
+        <div className="pt-4 border-t border-white/10">
+          <div className="bg-white/5 border border-white/10 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <div className="text-2xl">📄</div>
+              <div className="flex-1">
+                <div className="text-white font-medium mb-1">Update-Logs</div>
+                <div className="text-sm text-gray-400 mb-2">
+                  Logs werden hier gespeichert:
+                </div>
+                <div className="px-3 py-2 bg-white/5 rounded border border-white/10 font-mono text-xs text-gray-300 break-all">
+                  ~/Library/Logs/com.frametrain.desktop2/frametrain-update.log
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  💡 Tipp: Öffne den Finder, drücke Cmd+Shift+G und füge den Pfad ein
+                </p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
