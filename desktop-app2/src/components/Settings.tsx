@@ -4,6 +4,7 @@ import { useTheme, ThemeId } from '../contexts/ThemeContext';
 import { getVersion } from '@tauri-apps/api/app';
 import { check } from '@tauri-apps/plugin-updater';
 import { relaunch } from '@tauri-apps/plugin-process';
+import { writeTextFile, BaseDirectory } from '@tauri-apps/plugin-fs';
 
 interface UserData {
   apiKey: string;
@@ -36,6 +37,19 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
     checkForUpdates();
   }, []);
 
+  const logToFile = async (message: string) => {
+    try {
+      const timestamp = new Date().toISOString();
+      const logLine = `[${timestamp}] ${message}\n`;
+      await writeTextFile('frametrain-update.log', logLine, { 
+        dir: BaseDirectory.AppLog,
+        append: true 
+      });
+    } catch (error) {
+      console.error('Failed to write log:', error);
+    }
+  };
+
   const loadAppVersion = async () => {
     try {
       const version = await getVersion();
@@ -49,15 +63,27 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
   const checkForUpdates = async () => {
     setCheckingForUpdates(true);
     try {
-      console.log('[Settings/Updates] ========================================'  );
+      await logToFile('========================================');
+      await logToFile('Checking for updates...');
+      await logToFile(`Current version: ${appVersion}`);
+      await logToFile('Endpoint: https://github.com/KarolP-tech/FrameTrain/releases/latest/download/latest.json');
+      
+      console.log('[Settings/Updates] ========================================');
       console.log('[Settings/Updates] Checking for updates...');
       console.log('[Settings/Updates] Current version:', appVersion);
       
       const update = await check();
       
+      await logToFile(`Check result: ${JSON.stringify(update)}`);
       console.log('[Settings/Updates] Check result:', update);
       
       if (update) {
+        await logToFile('✅ Update available!');
+        await logToFile(`New version: ${update.version}`);
+        await logToFile(`Date: ${update.date}`);
+        await logToFile(`Body: ${update.body}`);
+        await logToFile('========================================');
+        
         console.log('[Settings/Updates] ✅ Update available!');
         console.log('[Settings/Updates] New version:', update.version);
         console.log('[Settings/Updates] ========================================');
@@ -67,6 +93,9 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
         setNotification({ type: 'success', message: `Update verfügbar: ${update.version}` });
         setTimeout(() => setNotification(null), 3000);
       } else {
+        await logToFile('ℹ️ No updates available');
+        await logToFile('========================================');
+        
         console.log('[Settings/Updates] ℹ️ No updates available');
         console.log('[Settings/Updates] ========================================');
         
@@ -75,6 +104,10 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
         setTimeout(() => setNotification(null), 3000);
       }
     } catch (error) {
+      await logToFile(`❌ Error: ${error}`);
+      await logToFile(`Error details: ${JSON.stringify(error, null, 2)}`);
+      await logToFile('========================================');
+      
       console.error('[Settings/Updates] ❌ Error checking for updates:', error);
       console.error('[Settings/Updates] Error details:', JSON.stringify(error, null, 2));
       console.error('[Settings/Updates] ========================================');
@@ -454,10 +487,29 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
       {/* Auto-Update Info */}
       <div className="bg-white/5 rounded-xl p-6 border border-white/10">
         <h3 className="text-lg font-semibold text-white mb-4">Automatische Updates</h3>
-        <p className="text-gray-400 text-sm">
+        <p className="text-gray-400 text-sm mb-4">
           FrameTrain prüft automatisch beim Start auf neue Versionen. Du wirst benachrichtigt, 
           wenn ein Update verfügbar ist.
         </p>
+        
+        <div className="flex items-center gap-3 pt-4 border-t border-white/10">
+          <button
+            onClick={async () => {
+              try {
+                const { open } = await import('@tauri-apps/plugin-shell');
+                await open('~/Library/Logs/com.frametrain.desktop2/');
+              } catch (error) {
+                console.error('Failed to open logs:', error);
+              }
+            }}
+            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg font-medium transition-colors text-sm"
+          >
+            📄 Log-Datei öffnen
+          </button>
+          <span className="text-xs text-gray-500">
+            Logs werden hier gespeichert: ~/Library/Logs/com.frametrain.desktop2/
+          </span>
+        </div>
       </div>
     </div>
   );
