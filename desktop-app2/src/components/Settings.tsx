@@ -307,14 +307,25 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
     setTimeout(() => setNotification(null), 3000);
   };
 
-  const renderAppearanceTab = () => (
+  const renderAppearanceTab = () => {
+    // Helper function to determine if a theme is light
+    const isLightTheme = (themeId: string) => {
+      return themeId === 'light-gray' || themeId === 'pure-white';
+    };
+
+    return (
     <div className="space-y-6">
       <div className="bg-white/5 rounded-xl p-6 border border-white/10">
         <h3 className="text-lg font-semibold text-white mb-4">Farbschema</h3>
         <p className="text-gray-400 mb-6">Wähle dein bevorzugtes Farbschema für die Desktop-App</p>
         
         <div className="grid grid-cols-3 gap-4 max-h-[500px] overflow-y-auto pr-2">
-          {Object.values(allThemes).map((theme) => (
+          {Object.values(allThemes).map((theme) => {
+            const isLight = isLightTheme(theme.id);
+            const textColor = isLight ? 'text-slate-900' : 'text-white';
+            const descColor = isLight ? 'text-slate-600' : 'text-gray-400';
+            
+            return (
             <button
               key={theme.id}
               onClick={() => handleThemeChange(theme.id)}
@@ -339,11 +350,12 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
               
               {/* Theme info */}
               <div className="text-center">
-                <div className="text-white font-semibold text-sm mb-1">{theme.name}</div>
-                <div className="text-xs text-gray-400">{theme.description}</div>
+                <div className={`${textColor} font-semibold text-sm mb-1`}>{theme.name}</div>
+                <div className={`text-xs ${descColor}`}>{theme.description}</div>
               </div>
             </button>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -366,7 +378,8 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
         </div>
       </div>
     </div>
-  );
+    );
+  };
 
   const renderNotificationsTab = () => (
     <div className="space-y-6">
