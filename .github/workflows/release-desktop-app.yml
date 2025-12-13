@@ -105,6 +105,10 @@ jobs:
             rust_target: 'x86_64-pc-windows-msvc'
 
     runs-on: ${{ matrix.platform }}
+    outputs:
+      darwin_sig: ${{ steps.extract_sig.outputs.darwin_sig }}
+      windows_sig: ${{ steps.extract_sig.outputs.windows_sig }}
+      linux_sig: ${{ steps.extract_sig.outputs.linux_sig }}
     
     steps:
       - uses: actions/checkout@v4
@@ -129,11 +133,53 @@ jobs:
         working-directory: ./desktop-app2
         run: npm ci
       
-      - name: Build Tauri App
+      - name: Build Tauri App with Signing
         working-directory: ./desktop-app2
         run: npm run tauri:build -- ${{ matrix.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+      
+      - name: Extract Signature (macOS)
+        if: matrix.platform == 'macos-latest'
+        id: extract_sig
+        run: |
+          SIG_FILE=$(find desktop-app2/src-tauri/target -name "*.app.tar.gz.sig" | head -n 1)
+          if [ -f "$SIG_FILE" ]; then
+            SIG=$(cat "$SIG_FILE")
+            echo "darwin_sig=$SIG" >> $GITHUB_OUTPUT
+            echo "macOS signature extracted"
+          else
+            echo "WARNING: No signature file found for macOS"
+          fi
+      
+      - name: Extract Signature (Windows)
+        if: matrix.platform == 'windows-latest'
+        id: extract_sig
+        shell: pwsh
+        run: |
+          $SigFile = Get-ChildItem -Path "desktop-app2\src-tauri\target" -Recurse -Filter "*.nsis.zip.sig" | Select-Object -First 1
+          if ($SigFile) {
+            $Sig = Get-Content $SigFile.FullName -Raw
+            "windows_sig=$Sig" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+            Write-Host "Windows signature extracted"
+          } else {
+            Write-Host "WARNING: No signature file found for Windows"
+          }
+      
+      - name: Extract Signature (Linux)
+        if: matrix.platform == 'ubuntu-22.04'
+        id: extract_sig
+        run: |
+          SIG_FILE=$(find desktop-app2/src-tauri/target -name "*.AppImage.tar.gz.sig" | head -n 1)
+          if [ -f "$SIG_FILE" ]; then
+            SIG=$(cat "$SIG_FILE")
+            echo "linux_sig=$SIG" >> $GITHUB_OUTPUT
+            echo "Linux signature extracted"
+          else
+            echo "WARNING: No signature file found for Linux"
+          fi
       
       - name: Create update packages manually (macOS)
         if: matrix.platform == 'macos-latest'
@@ -171,7 +217,6 @@ jobs:
         run: |
           Write-Host "Creating Windows update package..."
 
-          # Suche das nsis Verzeichnis dynamisch
           $nsisDir = Get-ChildItem -Path "desktop-app2\src-tauri\target" -Directory -Recurse |
             Where-Object { $_.FullName -match "bundle\\nsis$" } |
             Select-Object -First 1
@@ -185,7 +230,6 @@ jobs:
           Write-Host "Found NSIS directory: $($nsisDir.FullName)"
           Set-Location $nsisDir.FullName
 
-          # Setup-Installer finden
           $SetupExe = Get-ChildItem -Filter "*-setup.exe" | Select-Object -First 1
 
           if ($SetupExe) {
@@ -239,6 +283,7 @@ jobs:
           files: |
             ./desktop-app2/src-tauri/target/**/release/bundle/dmg/*.dmg
             ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.app.tar.gz
+            ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.app.tar.gz.sig
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -252,6 +297,7 @@ jobs:
             ./desktop-app2/src-tauri/target/**/release/bundle/msi/*.msi
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.exe
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.nsis.zip
+            ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.nsis.zip.sig
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -264,20 +310,79 @@ jobs:
           files: |
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.tar.gz
+            ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.tar.gz.sig
             ./desktop-app2/src-tauri/target/**/release/bundle/deb/*.deb
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      
+      - name: Save signatures as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: signatures-${{ matrix.platform }}
+          path: |
+            desktop-app2/src-tauri/target/**/*.sig
+          retention-days: 1
 
   generate-updater-json:
     needs: [create-release, build-tauri]
     runs-on: ubuntu-latest
     
     steps:
-      - name: Generate latest.json
+      - name: Download all signature artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: signatures
+      
+      - name: Extract signatures
+        id: get_sigs
         run: |
-          echo "Generating latest.json..."
+          echo "Extracting signatures..."
+          
+          # macOS signature
+          DARWIN_SIG_FILE=$(find signatures -name "*.app.tar.gz.sig" | head -n 1)
+          if [ -f "$DARWIN_SIG_FILE" ]; then
+            DARWIN_SIG=$(cat "$DARWIN_SIG_FILE" | tr -d '\n')
+            echo "darwin_sig<<EOF" >> $GITHUB_OUTPUT
+            echo "$DARWIN_SIG" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "macOS signature found"
+          else
+            echo "darwin_sig=" >> $GITHUB_OUTPUT
+            echo "WARNING: macOS signature not found"
+          fi
+          
+          # Windows signature
+          WINDOWS_SIG_FILE=$(find signatures -name "*.nsis.zip.sig" | head -n 1)
+          if [ -f "$WINDOWS_SIG_FILE" ]; then
+            WINDOWS_SIG=$(cat "$WINDOWS_SIG_FILE" | tr -d '\n')
+            echo "windows_sig<<EOF" >> $GITHUB_OUTPUT
+            echo "$WINDOWS_SIG" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "Windows signature found"
+          else
+            echo "windows_sig=" >> $GITHUB_OUTPUT
+            echo "WARNING: Windows signature not found"
+          fi
+          
+          # Linux signature
+          LINUX_SIG_FILE=$(find signatures -name "*.AppImage.tar.gz.sig" | head -n 1)
+          if [ -f "$LINUX_SIG_FILE" ]; then
+            LINUX_SIG=$(cat "$LINUX_SIG_FILE" | tr -d '\n')
+            echo "linux_sig<<EOF" >> $GITHUB_OUTPUT
+            echo "$LINUX_SIG" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+            echo "Linux signature found"
+          else
+            echo "linux_sig=" >> $GITHUB_OUTPUT
+            echo "WARNING: Linux signature not found"
+          fi
+      
+      - name: Generate latest.json with signatures
+        run: |
+          echo "Generating latest.json with real signatures..."
           mkdir -p release-temp
+          
           cat <<EOF > release-temp/latest.json
           {
             "version": "${{ needs.create-release.outputs.version }}",
@@ -285,17 +390,23 @@ jobs:
             "pub_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "platforms": {
               "darwin-aarch64": {
+                "signature": "${{ steps.get_sigs.outputs.darwin_sig }}",
                 "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2.app.tar.gz"
               },
               "windows-x86_64": {
+                "signature": "${{ steps.get_sigs.outputs.windows_sig }}",
                 "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_x64-setup.nsis.zip"
               },
               "linux-x86_64": {
+                "signature": "${{ steps.get_sigs.outputs.linux_sig }}",
                 "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_amd64.AppImage.tar.gz"
               }
             }
           }
           EOF
+          
+          echo "Generated latest.json:"
+          cat release-temp/latest.json
       
       - name: Upload latest.json
         uses: softprops/action-gh-release@v2
@@ -315,3 +426,4 @@ jobs:
         run: |
           echo "✅ Release v${{ needs.create-release.outputs.version }} created successfully!"
           echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.create-release.outputs.version }}"
+          echo "🔐 Updates are cryptographically signed and secure!"

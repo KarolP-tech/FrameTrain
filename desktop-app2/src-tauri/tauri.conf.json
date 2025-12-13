@@ -1,7 +1,7 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "FrameTrain 2",
-  "version": "1.0.21",
+  "version": "1.0.22",
   "identifier": "com.frametrain.desktop2",
   "build": {
     "beforeDevCommand": "npm run dev",
@@ -49,7 +49,8 @@
     "endpoints": [
       "https://github.com/KarolP-tech/FrameTrain/releases/latest/download/latest.json"
     ],
-    "dialog": false
+    "dialog": false,
+    "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEE3ODIxQ0VBRUI3NTcwMjgKUldRb2NIWHI2aHlDcC9OS1RaQzFlcW55bThUQUlzd2ZhWlpEQ1pyclk0MXowUzlmc0Rib3NTcXgK"
     }
   }
 }
