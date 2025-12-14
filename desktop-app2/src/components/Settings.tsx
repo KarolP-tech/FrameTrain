@@ -66,9 +66,10 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
     setCheckingForUpdates(true);
     try {
       await logToFile('========================================');
-      await logToFile('Checking for updates...');
-      await logToFile(`Current version: ${appVersion}`);
-      await logToFile('Endpoint: https://github.com/KarolP-tech/FrameTrain/releases/latest/download/latest.json');
+      await logToFile('🔍 Starting detailed update check...');
+      await logToFile(`📱 Current version: ${appVersion}`);
+      await logToFile(`🌐 Endpoint: https://github.com/KarolP-tech/FrameTrain/releases/latest/download/latest.json`);
+      await logToFile(`🔑 Pubkey: configured in tauri.conf.json`);
       
       console.log('[Settings/Updates] ========================================');
       console.log('[Settings/Updates] Checking for updates...');
@@ -76,7 +77,18 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
       
       const update = await check();
       
-      await logToFile(`Check result: ${update ? JSON.stringify(update) : 'null'}`);
+      // Detailed logging
+      if (update === null) {
+        await logToFile('❌ check() returned NULL');
+        await logToFile('⚠️ This means one of:');
+        await logToFile('  1. No newer version exists');
+        await logToFile('  2. Signature validation FAILED (empty/invalid sig)');
+        await logToFile('  3. Network error or JSON parse error');
+      } else {
+        await logToFile(`✅ check() returned object with keys: ${Object.keys(update).join(', ')}`);
+      }
+      
+      await logToFile(`📝 Full result: ${update ? JSON.stringify(update) : 'null'}`);
       console.log('[Settings/Updates] Check result:', update);
       
       if (update && update.version) {

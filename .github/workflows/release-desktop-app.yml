@@ -128,6 +128,27 @@ jobs:
         working-directory: ./desktop-app2
         run: npm ci
       
+      - name: Debug - Check if secrets are available
+        run: |
+          echo "Checking if TAURI secrets are available..."
+          if [ -z "${{ secrets.TAURI_PRIVATE_KEY }}" ]; then
+            echo "ERROR: TAURI_PRIVATE_KEY is not set!"
+            exit 1
+          else
+            echo "✓ TAURI_PRIVATE_KEY is set (length: ${#TAURI_PRIVATE_KEY})"
+          fi
+          
+          if [ -z "${{ secrets.TAURI_KEY_PASSWORD }}" ]; then
+            echo "ERROR: TAURI_KEY_PASSWORD is not set!"
+            exit 1
+          else
+            echo "✓ TAURI_KEY_PASSWORD is set"
+          fi
+        env:
+          TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
+          TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
+        shell: bash
+      
       - name: Build Tauri App with Signing
         working-directory: ./desktop-app2
         run: npm run tauri:build -- ${{ matrix.args }}
@@ -136,64 +157,61 @@ jobs:
           TAURI_PRIVATE_KEY: ${{ secrets.TAURI_PRIVATE_KEY }}
           TAURI_KEY_PASSWORD: ${{ secrets.TAURI_KEY_PASSWORD }}
       
-      - name: Extract Signature (macOS)
-        if: matrix.platform == 'macos-latest'
-        id: extract_sig_macos
+      - name: Debug - List all generated files
         run: |
-          SIG_FILE=$(find desktop-app2/src-tauri/target -name "*.app.tar.gz.sig" | head -n 1)
-          if [ -f "$SIG_FILE" ]; then
-            SIG=$(cat "$SIG_FILE")
-            echo "darwin_sig=$SIG" >> $GITHUB_OUTPUT
-            echo "macOS signature extracted"
-          else
-            echo "WARNING: No signature file found for macOS"
-          fi
+          echo "=== Listing all files in target directory ==="
+          find desktop-app2/src-tauri/target -type f -name "*.sig" || echo "No .sig files found!"
+          echo ""
+          echo "=== Listing bundle directory ==="
+          find desktop-app2/src-tauri/target -type d -name "bundle" -exec ls -la {} \; || echo "No bundle directory found!"
       
-      - name: Extract Signature (Windows)
-        if: matrix.platform == 'windows-latest'
-        id: extract_sig_windows
-        shell: pwsh
+      - name: Verify Signatures Were Created
         run: |
-          $SigFile = Get-ChildItem -Path "desktop-app2\src-tauri\target" -Recurse -Filter "*.nsis.zip.sig" | Select-Object -First 1
-          if ($SigFile) {
-            $Sig = Get-Content $SigFile.FullName -Raw
-            "windows_sig=$Sig" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
-            Write-Host "Windows signature extracted"
-          } else {
-            Write-Host "WARNING: No signature file found for Windows"
-          }
-      
-      - name: Extract Signature (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
-        id: extract_sig_linux
-        run: |
-          SIG_FILE=$(find desktop-app2/src-tauri/target -name "*.AppImage.tar.gz.sig" | head -n 1)
-          if [ -f "$SIG_FILE" ]; then
-            SIG=$(cat "$SIG_FILE")
-            echo "linux_sig=$SIG" >> $GITHUB_OUTPUT
-            echo "Linux signature extracted"
-          else
-            echo "WARNING: No signature file found for Linux"
+          echo "Verifying signature files..."
+          
+          if [ "${{ matrix.platform }}" == "macos-latest" ]; then
+            SIG_FILE=$(find desktop-app2/src-tauri/target -name "*.app.tar.gz.sig" | head -n 1)
+            if [ -z "$SIG_FILE" ]; then
+              echo "❌ ERROR: macOS signature file was not created!"
+              echo "This means TAURI_PRIVATE_KEY or TAURI_KEY_PASSWORD is incorrect!"
+              exit 1
+            fi
+            echo "✓ macOS signature found: $SIG_FILE"
           fi
+          
+          if [ "${{ matrix.platform }}" == "windows-latest" ]; then
+            SIG_FILE=$(find desktop-app2/src-tauri/target -name "*.nsis.zip.sig" | head -n 1)
+            if [ -z "$SIG_FILE" ]; then
+              echo "❌ ERROR: Windows signature file was not created!"
+              echo "This means TAURI_PRIVATE_KEY or TAURI_KEY_PASSWORD is incorrect!"
+              exit 1
+            fi
+            echo "✓ Windows signature found: $SIG_FILE"
+          fi
+          
+          if [ "${{ matrix.platform }}" == "ubuntu-22.04" ]; then
+            SIG_FILE=$(find desktop-app2/src-tauri/target -name "*.AppImage.tar.gz.sig" | head -n 1)
+            if [ -z "$SIG_FILE" ]; then
+              echo "❌ ERROR: Linux signature file was not created!"
+              echo "This means TAURI_PRIVATE_KEY or TAURI_KEY_PASSWORD is incorrect!"
+              exit 1
+            fi
+            echo "✓ Linux signature found: $SIG_FILE"
+          fi
+        shell: bash
       
       - name: Create update packages manually (macOS)
         if: matrix.platform == 'macos-latest'
         run: |
           echo "Creating macOS update package..."
-
           MACOS_DIR=$(find desktop-app2/src-tauri/target -type d -path "*/bundle/macos" | head -n 1)
-
           if [ -z "$MACOS_DIR" ]; then
             echo "ERROR: macOS bundle directory not found!"
-            find desktop-app2/src-tauri/target -maxdepth 5 -type d
             exit 1
           fi
-
           echo "Found macOS bundle directory: $MACOS_DIR"
           cd "$MACOS_DIR"
-
           APP_BUNDLE=$(find . -maxdepth 1 -name "*.app" -type d | head -n 1)
-
           if [ -n "$APP_BUNDLE" ]; then
             echo "Found app bundle: $APP_BUNDLE"
             tar -czf "FrameTrain.2.app.tar.gz" "$APP_BUNDLE"
@@ -201,7 +219,6 @@ jobs:
             ls -lh FrameTrain.2.app.tar.gz
           else
             echo "ERROR: No .app bundle found!"
-            ls -la
             exit 1
           fi
         shell: bash
@@ -211,22 +228,16 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "Creating Windows update package..."
-
           $nsisDir = Get-ChildItem -Path "desktop-app2\src-tauri\target" -Directory -Recurse |
             Where-Object { $_.FullName -match "bundle\\nsis$" } |
             Select-Object -First 1
-
           if (-not $nsisDir) {
             Write-Host "ERROR: NSIS bundle directory not found!"
-            Get-ChildItem -Path "desktop-app2\src-tauri\target" -Recurse
             exit 1
           }
-
           Write-Host "Found NSIS directory: $($nsisDir.FullName)"
           Set-Location $nsisDir.FullName
-
           $SetupExe = Get-ChildItem -Filter "*-setup.exe" | Select-Object -First 1
-
           if ($SetupExe) {
             Write-Host "Found setup exe: $($SetupExe.Name)"
             $ZipName = $SetupExe.Name -replace '-setup\.exe$', '-setup.nsis.zip'
@@ -235,7 +246,6 @@ jobs:
             Get-ChildItem $ZipName | Format-List Name, Length
           } else {
             Write-Host "ERROR: No setup.exe found!"
-            Get-ChildItem
             exit 1
           }
       
@@ -244,20 +254,14 @@ jobs:
         shell: bash
         run: |
           echo "Creating Linux update package..."
-
           APPDIR=$(find desktop-app2/src-tauri/target -type d -path "*/bundle/appimage" | head -n 1)
-
           if [ -z "$APPDIR" ]; then
             echo "ERROR: AppImage directory not found!"
-            find desktop-app2/src-tauri/target -maxdepth 5 -type d
             exit 1
           fi
-
           echo "Found AppImage directory: $APPDIR"
           cd "$APPDIR"
-
           APPIMAGE=$(find . -maxdepth 1 -name "*.AppImage" -type f ! -name "*.tar.gz" | head -n 1)
-
           if [ -n "$APPIMAGE" ]; then
             echo "Found AppImage: $APPIMAGE"
             APPIMAGE_NAME=$(basename "$APPIMAGE")
@@ -266,7 +270,6 @@ jobs:
             ls -lh "${APPIMAGE_NAME}.tar.gz"
           else
             echo "ERROR: No AppImage found!"
-            ls -la
             exit 1
           fi
       
@@ -329,6 +332,11 @@ jobs:
         with:
           path: signatures
       
+      - name: Debug - List downloaded artifacts
+        run: |
+          echo "=== Downloaded signature artifacts ==="
+          find signatures -type f
+      
       - name: Extract signatures
         id: get_sigs
         run: |
@@ -341,10 +349,10 @@ jobs:
             echo "darwin_sig<<EOF" >> $GITHUB_OUTPUT
             echo "$DARWIN_SIG" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
-            echo "macOS signature found"
+            echo "✓ macOS signature found (length: ${#DARWIN_SIG})"
           else
             echo "darwin_sig=" >> $GITHUB_OUTPUT
-            echo "WARNING: macOS signature not found"
+            echo "❌ WARNING: macOS signature not found"
           fi
           
           # Windows signature
@@ -354,10 +362,10 @@ jobs:
             echo "windows_sig<<EOF" >> $GITHUB_OUTPUT
             echo "$WINDOWS_SIG" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
-            echo "Windows signature found"
+            echo "✓ Windows signature found (length: ${#WINDOWS_SIG})"
           else
             echo "windows_sig=" >> $GITHUB_OUTPUT
-            echo "WARNING: Windows signature not found"
+            echo "❌ WARNING: Windows signature not found"
           fi
           
           # Linux signature
@@ -367,10 +375,10 @@ jobs:
             echo "linux_sig<<EOF" >> $GITHUB_OUTPUT
             echo "$LINUX_SIG" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
-            echo "Linux signature found"
+            echo "✓ Linux signature found (length: ${#LINUX_SIG})"
           else
             echo "linux_sig=" >> $GITHUB_OUTPUT
-            echo "WARNING: Linux signature not found"
+            echo "❌ WARNING: Linux signature not found"
           fi
       
       - name: Generate latest.json with signatures
