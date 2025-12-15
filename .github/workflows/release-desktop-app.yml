@@ -172,7 +172,8 @@ jobs:
             SIG_FILE=$(find desktop-app2/src-tauri/target -name "*.app.tar.gz.sig" | head -n 1)
             if [ -z "$SIG_FILE" ]; then
               echo "❌ ERROR: macOS signature file was not created!"
-              echo "This means TAURI_PRIVATE_KEY or TAURI_KEY_PASSWORD is incorrect!"
+              echo "This means TAURI_SIGNING_PRIVATE_KEY or TAURI_SIGNING_PRIVATE_KEY_PASSWORD is incorrect!"
+              echo "Or the secrets are not properly set in GitHub repository settings."
               exit 1
             fi
             echo "✓ macOS signature found: $SIG_FILE"
@@ -182,7 +183,8 @@ jobs:
             SIG_FILE=$(find desktop-app2/src-tauri/target -name "*.nsis.zip.sig" | head -n 1)
             if [ -z "$SIG_FILE" ]; then
               echo "❌ ERROR: Windows signature file was not created!"
-              echo "This means TAURI_PRIVATE_KEY or TAURI_KEY_PASSWORD is incorrect!"
+              echo "This means TAURI_SIGNING_PRIVATE_KEY or TAURI_SIGNING_PRIVATE_KEY_PASSWORD is incorrect!"
+              echo "Or the secrets are not properly set in GitHub repository settings."
               exit 1
             fi
             echo "✓ Windows signature found: $SIG_FILE"
@@ -192,7 +194,8 @@ jobs:
             SIG_FILE=$(find desktop-app2/src-tauri/target -name "*.AppImage.tar.gz.sig" | head -n 1)
             if [ -z "$SIG_FILE" ]; then
               echo "❌ ERROR: Linux signature file was not created!"
-              echo "This means TAURI_PRIVATE_KEY or TAURI_KEY_PASSWORD is incorrect!"
+              echo "This means TAURI_SIGNING_PRIVATE_KEY or TAURI_SIGNING_PRIVATE_KEY_PASSWORD is incorrect!"
+              echo "Or the secrets are not properly set in GitHub repository settings."
               exit 1
             fi
             echo "✓ Linux signature found: $SIG_FILE"
