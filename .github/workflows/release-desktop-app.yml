@@ -190,7 +190,7 @@ jobs:
             # Sign the update package with explicit key file
             echo "Signing update package..."
             cd /Users/runner/work/FrameTrain/FrameTrain/desktop-app2
-            npm run tauri signer sign \
+            npm run tauri -- signer sign \
               --private-key "$TEMP_KEY_FILE" \
               "$MACOS_DIR/FrameTrain.2.app.tar.gz"
             
@@ -245,7 +245,7 @@ jobs:
             # Sign the update package with explicit key file
             Write-Host "Signing update package..."
             Set-Location "D:\a\FrameTrain\FrameTrain\desktop-app2"
-            npm run tauri signer sign `
+            npm run tauri -- signer sign `
               --private-key "$($TempKeyFile.FullName)" `
               "$($nsisDir.FullName)\$ZipName"
             
@@ -294,7 +294,7 @@ jobs:
             # Sign the update package with explicit key file
             echo "Signing update package..."
             cd /home/runner/work/FrameTrain/FrameTrain/desktop-app2
-            npm run tauri signer sign \
+            npm run tauri -- signer sign \
               --private-key "$TEMP_KEY_FILE" \
               "$APPDIR/${APPIMAGE_NAME}.tar.gz"
             
