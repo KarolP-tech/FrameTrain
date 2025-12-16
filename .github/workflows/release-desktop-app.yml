@@ -185,13 +185,14 @@ jobs:
             # Write key to temporary file
             echo "Preparing signing key..."
             TEMP_KEY_FILE=$(mktemp)
-            echo "$TAURI_SIGNING_PRIVATE_KEY" > "$TEMP_KEY_FILE"
+            printf "%s" "$TAURI_SIGNING_PRIVATE_KEY" > "$TEMP_KEY_FILE"
             
             # Sign the update package with explicit key file
             echo "Signing update package..."
-            cd /Users/runner/work/FrameTrain/FrameTrain/desktop-app2
+            cd "$GITHUB_WORKSPACE/desktop-app2"
             npx tauri signer sign \
               --private-key "$TEMP_KEY_FILE" \
+              --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
               "$MACOS_DIR/FrameTrain.2.app.tar.gz"
             
             # Clean up temporary key file
@@ -240,13 +241,17 @@ jobs:
             # Write key to temporary file
             Write-Host "Preparing signing key..."
             $TempKeyFile = New-TemporaryFile
-            $env:TAURI_SIGNING_PRIVATE_KEY | Out-File -FilePath $TempKeyFile.FullName -NoNewline -Encoding utf8
+            [System.IO.File]::WriteAllText(
+              $TempKeyFile.FullName,
+              $env:TAURI_SIGNING_PRIVATE_KEY
+            )
             
             # Sign the update package with explicit key file
             Write-Host "Signing update package..."
             Set-Location "D:\a\FrameTrain\FrameTrain\desktop-app2"
             npx tauri signer sign `
               --private-key "$($TempKeyFile.FullName)" `
+              --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" `
               "$($nsisDir.FullName)\$ZipName"
             
             # Clean up temporary key file
@@ -289,13 +294,14 @@ jobs:
             # Write key to temporary file
             echo "Preparing signing key..."
             TEMP_KEY_FILE=$(mktemp)
-            echo "$TAURI_SIGNING_PRIVATE_KEY" > "$TEMP_KEY_FILE"
+            printf "%s" "$TAURI_SIGNING_PRIVATE_KEY" > "$TEMP_KEY_FILE"
             
             # Sign the update package with explicit key file
             echo "Signing update package..."
             cd /home/runner/work/FrameTrain/FrameTrain/desktop-app2
             npx tauri signer sign \
               --private-key "$TEMP_KEY_FILE" \
+              --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
               "$APPDIR/${APPIMAGE_NAME}.tar.gz"
             
             # Clean up temporary key file
