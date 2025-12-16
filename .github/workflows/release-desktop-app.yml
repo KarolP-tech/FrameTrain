@@ -182,10 +182,21 @@ jobs:
             echo "Created FrameTrain.2.app.tar.gz"
             ls -lh FrameTrain.2.app.tar.gz
             
-            # Sign the update package
+            # Write key to temporary file
+            echo "Preparing signing key..."
+            TEMP_KEY_FILE=$(mktemp)
+            echo "$TAURI_SIGNING_PRIVATE_KEY" > "$TEMP_KEY_FILE"
+            
+            # Sign the update package with explicit key file
             echo "Signing update package..."
             cd /Users/runner/work/FrameTrain/FrameTrain/desktop-app2
-            npm run tauri signer sign "$MACOS_DIR/FrameTrain.2.app.tar.gz"
+            npm run tauri signer sign \
+              --private-key "$TEMP_KEY_FILE" \
+              --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
+              "$MACOS_DIR/FrameTrain.2.app.tar.gz"
+            
+            # Clean up temporary key file
+            rm -f "$TEMP_KEY_FILE"
             
             # Verify signature was created
             if [ -f "$MACOS_DIR/FrameTrain.2.app.tar.gz.sig" ]; then
@@ -227,10 +238,21 @@ jobs:
             Write-Host "Created $ZipName"
             Get-ChildItem $ZipName | Format-List Name, Length
             
-            # Sign the update package
+            # Write key to temporary file
+            Write-Host "Preparing signing key..."
+            $TempKeyFile = New-TemporaryFile
+            $env:TAURI_SIGNING_PRIVATE_KEY | Out-File -FilePath $TempKeyFile.FullName -NoNewline -Encoding utf8
+            
+            # Sign the update package with explicit key file
             Write-Host "Signing update package..."
             Set-Location "D:\a\FrameTrain\FrameTrain\desktop-app2"
-            npm run tauri signer sign "$($nsisDir.FullName)\$ZipName"
+            npm run tauri signer sign `
+              --private-key "$($TempKeyFile.FullName)" `
+              --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" `
+              "$($nsisDir.FullName)\$ZipName"
+            
+            # Clean up temporary key file
+            Remove-Item -Path $TempKeyFile.FullName -Force
             
             # Verify signature
             $SigFile = "$($nsisDir.FullName)\$ZipName.sig"
@@ -266,10 +288,21 @@ jobs:
             echo "Created ${APPIMAGE_NAME}.tar.gz"
             ls -lh "${APPIMAGE_NAME}.tar.gz"
             
-            # Sign the update package
+            # Write key to temporary file
+            echo "Preparing signing key..."
+            TEMP_KEY_FILE=$(mktemp)
+            echo "$TAURI_SIGNING_PRIVATE_KEY" > "$TEMP_KEY_FILE"
+            
+            # Sign the update package with explicit key file
             echo "Signing update package..."
             cd /home/runner/work/FrameTrain/FrameTrain/desktop-app2
-            npm run tauri signer sign "$APPDIR/${APPIMAGE_NAME}.tar.gz"
+            npm run tauri signer sign \
+              --private-key "$TEMP_KEY_FILE" \
+              --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
+              "$APPDIR/${APPIMAGE_NAME}.tar.gz"
+            
+            # Clean up temporary key file
+            rm -f "$TEMP_KEY_FILE"
             
             # Verify signature was created
             if [ -f "$APPDIR/${APPIMAGE_NAME}.tar.gz.sig" ]; then
