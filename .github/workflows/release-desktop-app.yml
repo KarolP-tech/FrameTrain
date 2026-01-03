@@ -141,13 +141,13 @@ jobs:
           echo "=== Build artifacts created ===" 
           if [ "${{ matrix.platform }}" == "macos-latest" ]; then
             echo "macOS artifacts:"
-            find desktop-app2/src-tauri/target -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.app.tar.gz.sig" 2>/dev/null || true
+            find desktop-app2/src-tauri/target -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.sig" 2>/dev/null || true
           elif [ "${{ matrix.platform }}" == "windows-latest" ]; then
             echo "Windows artifacts:"
-            find desktop-app2/src-tauri/target -name "*.msi" -o -name "*.exe" -o -name "*.nsis.zip" -o -name "*.nsis.zip.sig" 2>/dev/null || true
+            find desktop-app2/src-tauri/target -name "*.msi" -o -name "*.exe" -o -name "*.sig" 2>/dev/null || true
           else
             echo "Linux artifacts:"
-            find desktop-app2/src-tauri/target -name "*.AppImage" -o -name "*.AppImage.tar.gz" -o -name "*.AppImage.tar.gz.sig" -o -name "*.deb" 2>/dev/null || true
+            find desktop-app2/src-tauri/target -name "*.AppImage" -o -name "*.deb" -o -name "*.rpm" -o -name "*.sig" 2>/dev/null || true
           fi
         shell: bash
       
@@ -171,9 +171,9 @@ jobs:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
             ./desktop-app2/src-tauri/target/**/release/bundle/msi/*.msi
+            ./desktop-app2/src-tauri/target/**/release/bundle/msi/*.msi.sig
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.exe
-            ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.nsis.zip
-            ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.nsis.zip.sig
+            ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.exe.sig
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -185,9 +185,11 @@ jobs:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage
-            ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.tar.gz
-            ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.tar.gz.sig
+            ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.sig
             ./desktop-app2/src-tauri/target/**/release/bundle/deb/*.deb
+            ./desktop-app2/src-tauri/target/**/release/bundle/deb/*.deb.sig
+            ./desktop-app2/src-tauri/target/**/release/bundle/rpm/*.rpm
+            ./desktop-app2/src-tauri/target/**/release/bundle/rpm/*.rpm.sig
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -220,7 +222,7 @@ jobs:
         run: |
           echo "Extracting signatures..."
           
-          # macOS signature
+          # macOS signature (.app.tar.gz.sig)
           DARWIN_SIG_FILE=$(find signatures -name "*.app.tar.gz.sig" | head -n 1)
           if [ -f "$DARWIN_SIG_FILE" ]; then
             DARWIN_SIG=$(cat "$DARWIN_SIG_FILE" | tr -d '\n')
@@ -233,8 +235,8 @@ jobs:
             echo "❌ WARNING: macOS signature not found"
           fi
           
-          # Windows signature
-          WINDOWS_SIG_FILE=$(find signatures -name "*.nsis.zip.sig" | head -n 1)
+          # Windows signature (.exe.sig - NSIS updater)
+          WINDOWS_SIG_FILE=$(find signatures -name "*-setup.exe.sig" | head -n 1)
           if [ -f "$WINDOWS_SIG_FILE" ]; then
             WINDOWS_SIG=$(cat "$WINDOWS_SIG_FILE" | tr -d '\n')
             echo "windows_sig<<EOF" >> $GITHUB_OUTPUT
@@ -246,8 +248,8 @@ jobs:
             echo "❌ WARNING: Windows signature not found"
           fi
           
-          # Linux signature
-          LINUX_SIG_FILE=$(find signatures -name "*.AppImage.tar.gz.sig" | head -n 1)
+          # Linux signature (.AppImage.sig)
+          LINUX_SIG_FILE=$(find signatures -name "*.AppImage.sig" | head -n 1)
           if [ -f "$LINUX_SIG_FILE" ]; then
             LINUX_SIG=$(cat "$LINUX_SIG_FILE" | tr -d '\n')
             echo "linux_sig<<EOF" >> $GITHUB_OUTPUT
@@ -276,11 +278,11 @@ jobs:
               },
               "windows-x86_64": {
                 "signature": "${{ steps.get_sigs.outputs.windows_sig }}",
-                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_x64-setup.nsis.zip"
+                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_x64-setup.exe"
               },
               "linux-x86_64": {
                 "signature": "${{ steps.get_sigs.outputs.linux_sig }}",
-                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_amd64.AppImage.tar.gz"
+                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_amd64.AppImage"
               }
             }
           }
