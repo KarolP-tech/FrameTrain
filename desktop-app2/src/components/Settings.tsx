@@ -630,7 +630,7 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
 
       <div className="bg-white/5 rounded-xl p-6 border border-white/10">
         <p className="text-sm text-gray-400 text-center">
-          © 2024 FrameTrain. Alle Rechte vorbehalten.
+          © 2025 FrameTrain. Alle Rechte vorbehalten.
         </p>
       </div>
     </div>
