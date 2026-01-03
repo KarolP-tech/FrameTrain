@@ -128,27 +128,7 @@ jobs:
         working-directory: ./desktop-app2
         run: npm ci
       
-      - name: Debug - Check if secrets are available
-        run: |
-          echo "Checking if TAURI secrets are available..."
-          if [ -z "${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}" ]; then
-            echo "ERROR: TAURI_SIGNING_PRIVATE_KEY is not set!"
-            exit 1
-          else
-            echo "✓ TAURI_SIGNING_PRIVATE_KEY is set (length: ${#TAURI_SIGNING_PRIVATE_KEY})"
-          fi
-          
-          if [ -z "${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}" ]; then
-            echo "WARNING: TAURI_SIGNING_PRIVATE_KEY_PASSWORD is not set (using key without password)"
-          else
-            echo "✓ TAURI_SIGNING_PRIVATE_KEY_PASSWORD is set"
-          fi
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        shell: bash
-      
-      - name: Build Tauri App with Signing
+      - name: Build Tauri App with Auto-Signing
         working-directory: ./desktop-app2
         run: npm run tauri:build -- ${{ matrix.args }}
         env:
@@ -156,172 +136,20 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       
-      - name: Debug - List all generated files
+      - name: Debug - List generated artifacts
         run: |
-          echo "=== Build artifacts created ==="
-          echo "macOS builds:" && find desktop-app2/src-tauri/target -name "*.app" -o -name "*.dmg" 2>/dev/null || true
-          echo "Windows builds:" && find desktop-app2/src-tauri/target -name "*.msi" -o -name "*.exe" 2>/dev/null || true
-          echo "Linux builds:" && find desktop-app2/src-tauri/target -name "*.AppImage" -o -name "*.deb" 2>/dev/null || true
-          echo "Note: .sig files will be created after update packages are built"
-      
-      - name: Create and sign update packages (macOS)
-        if: matrix.platform == 'macos-latest'
-        run: |
-          echo "Creating macOS update package..."
-          MACOS_DIR=$(find desktop-app2/src-tauri/target -type d -path "*/bundle/macos" | head -n 1)
-          if [ -z "$MACOS_DIR" ]; then
-            echo "ERROR: macOS bundle directory not found!"
-            exit 1
-          fi
-          echo "Found macOS bundle directory: $MACOS_DIR"
-          cd "$MACOS_DIR"
-          APP_BUNDLE=$(find . -maxdepth 1 -name "*.app" -type d | head -n 1)
-          if [ -n "$APP_BUNDLE" ]; then
-            echo "Found app bundle: $APP_BUNDLE"
-            tar -czf "FrameTrain.2.app.tar.gz" "$APP_BUNDLE"
-            echo "Created FrameTrain.2.app.tar.gz"
-            ls -lh FrameTrain.2.app.tar.gz
-            
-            # Write key to temporary file
-            echo "Preparing signing key..."
-            TEMP_KEY_FILE=$(mktemp)
-            printf "%s" "$TAURI_SIGNING_PRIVATE_KEY" > "$TEMP_KEY_FILE"
-            
-            # Sign the update package with explicit key file
-            echo "Signing update package..."
-            cd "$GITHUB_WORKSPACE/desktop-app2"
-            npx tauri signer sign \
-              --private-key "$TEMP_KEY_FILE" \
-              --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
-              "$MACOS_DIR/FrameTrain.2.app.tar.gz"
-            
-            # Clean up temporary key file
-            rm -f "$TEMP_KEY_FILE"
-            
-            # Verify signature was created
-            if [ -f "$MACOS_DIR/FrameTrain.2.app.tar.gz.sig" ]; then
-              echo "✓ Signature created successfully"
-              cat "$MACOS_DIR/FrameTrain.2.app.tar.gz.sig"
-            else
-              echo "❌ ERROR: Signature file was not created!"
-              exit 1
-            fi
+          echo "=== Build artifacts created ===" 
+          if [ "${{ matrix.platform }}" == "macos-latest" ]; then
+            echo "macOS artifacts:"
+            find desktop-app2/src-tauri/target -name "*.dmg" -o -name "*.app.tar.gz" -o -name "*.app.tar.gz.sig" 2>/dev/null || true
+          elif [ "${{ matrix.platform }}" == "windows-latest" ]; then
+            echo "Windows artifacts:"
+            find desktop-app2/src-tauri/target -name "*.msi" -o -name "*.exe" -o -name "*.nsis.zip" -o -name "*.nsis.zip.sig" 2>/dev/null || true
           else
-            echo "ERROR: No .app bundle found!"
-            exit 1
+            echo "Linux artifacts:"
+            find desktop-app2/src-tauri/target -name "*.AppImage" -o -name "*.AppImage.tar.gz" -o -name "*.AppImage.tar.gz.sig" -o -name "*.deb" 2>/dev/null || true
           fi
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         shell: bash
-      
-      - name: Create and sign update packages (Windows)
-        if: matrix.platform == 'windows-latest'
-        shell: pwsh
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
-        run: |
-          Write-Host "Creating Windows update package..."
-          $nsisDir = Get-ChildItem -Path "desktop-app2\src-tauri\target" -Directory -Recurse | Where-Object { $_.FullName -match "bundle\\nsis$" } | Select-Object -First 1
-          if (-not $nsisDir) {
-            Write-Host "ERROR: NSIS bundle directory not found!"
-            exit 1
-          }
-          Write-Host "Found NSIS directory: $($nsisDir.FullName)"
-          Set-Location $nsisDir.FullName
-          $SetupExe = Get-ChildItem -Filter "*-setup.exe" | Select-Object -First 1
-          if ($SetupExe) {
-            Write-Host "Found setup exe: $($SetupExe.Name)"
-            $ZipName = $SetupExe.Name -replace '-setup\.exe$', '-setup.nsis.zip'
-            Compress-Archive -Path $SetupExe.Name -DestinationPath $ZipName -Force
-            Write-Host "Created $ZipName"
-            Get-ChildItem $ZipName | Format-List Name, Length
-            
-            # Write key to temporary file
-            Write-Host "Preparing signing key..."
-            $TempKeyFile = New-TemporaryFile
-            [System.IO.File]::WriteAllText(
-              $TempKeyFile.FullName,
-              $env:TAURI_SIGNING_PRIVATE_KEY
-            )
-            
-            # Sign the update package with explicit key file
-            Write-Host "Signing update package..."
-            Set-Location "D:\a\FrameTrain\FrameTrain\desktop-app2"
-            npx tauri signer sign `
-              --private-key "$($TempKeyFile.FullName)" `
-              --password "$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD" `
-              "$($nsisDir.FullName)\$ZipName"
-            
-            # Clean up temporary key file
-            Remove-Item -Path $TempKeyFile.FullName -Force
-            
-            # Verify signature
-            $SigFile = "$($nsisDir.FullName)\$ZipName.sig"
-            if (Test-Path $SigFile) {
-              Write-Host "✓ Signature created successfully"
-              Get-Content $SigFile
-            } else {
-              Write-Host "❌ ERROR: Signature file was not created!"
-              exit 1
-            }
-          } else {
-            Write-Host "ERROR: No setup.exe found!"
-            exit 1
-          }
-      
-      - name: Create and sign update packages (Linux)
-        if: matrix.platform == 'ubuntu-22.04'
-        shell: bash
-        run: |
-          echo "Creating Linux update package..."
-          APPDIR=$(find desktop-app2/src-tauri/target -type d -path "*/bundle/appimage" | head -n 1)
-          if [ -z "$APPDIR" ]; then
-            echo "ERROR: AppImage directory not found!"
-            exit 1
-          fi
-          echo "Found AppImage directory: $APPDIR"
-          cd "$APPDIR"
-          APPIMAGE=$(find . -maxdepth 1 -name "*.AppImage" -type f ! -name "*.tar.gz" | head -n 1)
-          if [ -n "$APPIMAGE" ]; then
-            echo "Found AppImage: $APPIMAGE"
-            APPIMAGE_NAME=$(basename "$APPIMAGE")
-            tar -czf "${APPIMAGE_NAME}.tar.gz" "$APPIMAGE_NAME"
-            echo "Created ${APPIMAGE_NAME}.tar.gz"
-            ls -lh "${APPIMAGE_NAME}.tar.gz"
-            
-            # Write key to temporary file
-            echo "Preparing signing key..."
-            TEMP_KEY_FILE=$(mktemp)
-            printf "%s" "$TAURI_SIGNING_PRIVATE_KEY" > "$TEMP_KEY_FILE"
-            
-            # Sign the update package with explicit key file
-            echo "Signing update package..."
-            cd /home/runner/work/FrameTrain/FrameTrain/desktop-app2
-            npx tauri signer sign \
-              --private-key "$TEMP_KEY_FILE" \
-              --password "$TAURI_SIGNING_PRIVATE_KEY_PASSWORD" \
-              "$APPDIR/${APPIMAGE_NAME}.tar.gz"
-            
-            # Clean up temporary key file
-            rm -f "$TEMP_KEY_FILE"
-            
-            # Verify signature was created
-            if [ -f "$APPDIR/${APPIMAGE_NAME}.tar.gz.sig" ]; then
-              echo "✓ Signature created successfully"
-              cat "$APPDIR/${APPIMAGE_NAME}.tar.gz.sig"
-            else
-              echo "❌ ERROR: Signature file was not created!"
-              exit 1
-            fi
-          else
-            echo "ERROR: No AppImage found!"
-            exit 1
-          fi
-        env:
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       
       - name: Upload Release Assets (macOS)
         if: matrix.platform == 'macos-latest'
