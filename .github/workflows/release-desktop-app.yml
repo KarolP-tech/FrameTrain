@@ -128,13 +128,11 @@ jobs:
         working-directory: ./desktop-app2
         run: npm ci
       
-      - name: Build Tauri App with Auto-Signing
+      - name: Build Tauri App
         working-directory: ./desktop-app2
         run: npm run tauri:build -- ${{ matrix.args }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
-          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
       
       - name: Debug - List generated artifacts
         run: |
@@ -159,7 +157,6 @@ jobs:
           files: |
             ./desktop-app2/src-tauri/target/**/release/bundle/dmg/*.dmg
             ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.app.tar.gz
-            ./desktop-app2/src-tauri/target/**/release/bundle/macos/*.app.tar.gz.sig
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -171,9 +168,7 @@ jobs:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
             ./desktop-app2/src-tauri/target/**/release/bundle/msi/*.msi
-            ./desktop-app2/src-tauri/target/**/release/bundle/msi/*.msi.sig
             ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.exe
-            ./desktop-app2/src-tauri/target/**/release/bundle/nsis/*.exe.sig
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -185,85 +180,19 @@ jobs:
           tag_name: v${{ needs.create-release.outputs.version }}
           files: |
             ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage
-            ./desktop-app2/src-tauri/target/**/release/bundle/appimage/*.AppImage.sig
             ./desktop-app2/src-tauri/target/**/release/bundle/deb/*.deb
-            ./desktop-app2/src-tauri/target/**/release/bundle/deb/*.deb.sig
-            ./desktop-app2/src-tauri/target/**/release/bundle/rpm/*.rpm
-            ./desktop-app2/src-tauri/target/**/release/bundle/rpm/*.rpm.sig
           fail_on_unmatched_files: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      
-      - name: Save signatures as artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: signatures-${{ matrix.platform }}
-          path: |
-            desktop-app2/src-tauri/target/**/*.sig
-          retention-days: 1
 
   generate-updater-json:
     needs: [create-release, build-tauri]
     runs-on: ubuntu-latest
     
     steps:
-      - name: Download all signature artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: signatures
-      
-      - name: Debug - List downloaded artifacts
+      - name: Generate latest.json without signatures
         run: |
-          echo "=== Downloaded signature artifacts ==="
-          find signatures -type f
-      
-      - name: Extract signatures
-        id: get_sigs
-        run: |
-          echo "Extracting signatures..."
-          
-          # macOS signature (.app.tar.gz.sig)
-          DARWIN_SIG_FILE=$(find signatures -name "*.app.tar.gz.sig" | head -n 1)
-          if [ -f "$DARWIN_SIG_FILE" ]; then
-            DARWIN_SIG=$(cat "$DARWIN_SIG_FILE" | tr -d '\n')
-            echo "darwin_sig<<EOF" >> $GITHUB_OUTPUT
-            echo "$DARWIN_SIG" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "✓ macOS signature found (length: ${#DARWIN_SIG})"
-          else
-            echo "darwin_sig=" >> $GITHUB_OUTPUT
-            echo "❌ WARNING: macOS signature not found"
-          fi
-          
-          # Windows signature (.exe.sig - NSIS updater)
-          WINDOWS_SIG_FILE=$(find signatures -name "*-setup.exe.sig" | head -n 1)
-          if [ -f "$WINDOWS_SIG_FILE" ]; then
-            WINDOWS_SIG=$(cat "$WINDOWS_SIG_FILE" | tr -d '\n')
-            echo "windows_sig<<EOF" >> $GITHUB_OUTPUT
-            echo "$WINDOWS_SIG" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "✓ Windows signature found (length: ${#WINDOWS_SIG})"
-          else
-            echo "windows_sig=" >> $GITHUB_OUTPUT
-            echo "❌ WARNING: Windows signature not found"
-          fi
-          
-          # Linux signature (.AppImage.sig)
-          LINUX_SIG_FILE=$(find signatures -name "*.AppImage.sig" | head -n 1)
-          if [ -f "$LINUX_SIG_FILE" ]; then
-            LINUX_SIG=$(cat "$LINUX_SIG_FILE" | tr -d '\n')
-            echo "linux_sig<<EOF" >> $GITHUB_OUTPUT
-            echo "$LINUX_SIG" >> $GITHUB_OUTPUT
-            echo "EOF" >> $GITHUB_OUTPUT
-            echo "✓ Linux signature found (length: ${#LINUX_SIG})"
-          else
-            echo "linux_sig=" >> $GITHUB_OUTPUT
-            echo "❌ WARNING: Linux signature not found"
-          fi
-      
-      - name: Generate latest.json with signatures
-        run: |
-          echo "Generating latest.json with real signatures..."
+          echo "Generating latest.json (no signature validation)..."
           mkdir -p release-temp
           
           cat <<EOF > release-temp/latest.json
@@ -272,16 +201,13 @@ jobs:
             "notes": "Auto-generated release notes for v${{ needs.create-release.outputs.version }}",
             "pub_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "platforms": {
-              "darwin-aarch64": {
-                "signature": "${{ steps.get_sigs.outputs.darwin_sig }}",
+              "darwin": {
                 "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2.app.tar.gz"
               },
-              "windows-x86_64": {
-                "signature": "${{ steps.get_sigs.outputs.windows_sig }}",
+              "windows": {
                 "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_x64-setup.exe"
               },
-              "linux-x86_64": {
-                "signature": "${{ steps.get_sigs.outputs.linux_sig }}",
+              "linux": {
                 "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_amd64.AppImage"
               }
             }
