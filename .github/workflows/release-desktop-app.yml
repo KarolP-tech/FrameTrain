@@ -185,49 +185,8 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  generate-updater-json:
-    needs: [create-release, build-tauri]
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Generate latest.json without signatures
-        run: |
-          echo "Generating latest.json (no signature validation)..."
-          mkdir -p release-temp
-          
-          cat <<EOF > release-temp/latest.json
-          {
-            "version": "${{ needs.create-release.outputs.version }}",
-            "notes": "Auto-generated release notes for v${{ needs.create-release.outputs.version }}",
-            "pub_date": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
-            "platforms": {
-              "darwin": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2.app.tar.gz"
-              },
-              "windows": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_x64-setup.exe"
-              },
-              "linux": {
-                "url": "https://github.com/${{ github.repository }}/releases/download/v${{ needs.create-release.outputs.version }}/FrameTrain.2_${{ needs.create-release.outputs.version }}_amd64.AppImage"
-              }
-            }
-          }
-          EOF
-          
-          echo "Generated latest.json:"
-          cat release-temp/latest.json
-      
-      - name: Upload latest.json
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ needs.create-release.outputs.version }}
-          files: release-temp/latest.json
-          fail_on_unmatched_files: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
   notify-release:
-    needs: [create-release, build-tauri, generate-updater-json]
+    needs: [create-release, build-tauri]
     runs-on: ubuntu-latest
     
     steps:
@@ -235,4 +194,4 @@ jobs:
         run: |
           echo "✅ Release v${{ needs.create-release.outputs.version }} created successfully!"
           echo "🔗 Release URL: https://github.com/${{ github.repository }}/releases/tag/v${{ needs.create-release.outputs.version }}"
-          echo "🔐 Updates are cryptographically signed and secure!"
+          echo "📦 Installers ready for all platforms!"
