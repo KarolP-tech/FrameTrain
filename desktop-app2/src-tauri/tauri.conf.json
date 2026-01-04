@@ -50,7 +50,8 @@
     "endpoints": [
       "https://github.com/KarolP-tech/FrameTrain/releases/latest/download/latest.json"
     ],
-    "dialog": false
+    "dialog": false,
+    "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDZDQzdBMzVGMUNCNzE4NDMKUldSREdMY2NYNlBIYklyancrZUhkQi9HRzkrUUZCSDBXSnBoM29qOGh3eG1UcEU3VzFHK0JxTnkK"
     }
   }
 }
