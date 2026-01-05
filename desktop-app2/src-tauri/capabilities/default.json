@@ -8,9 +8,6 @@
     "shell:allow-open",
     "os:default",
     "dialog:default",
-    "fs:default",
-    "updater:default",
-    "updater:allow-check",
-    "updater:allow-download-and-install"
+    "fs:default"
   ]
 }
