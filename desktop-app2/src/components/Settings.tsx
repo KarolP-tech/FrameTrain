@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { User, Key, Shield, Bell, Palette, Info, ExternalLink, LogOut, AlertCircle, CheckCircle, Check, Download } from 'lucide-react';
 import { useTheme, ThemeId } from '../contexts/ThemeContext';
 import { getVersion } from '@tauri-apps/api/app';
-import { check } from '@tauri-apps/plugin-updater';
-import { relaunch } from '@tauri-apps/plugin-process';
 
 interface UserData {
   apiKey: string;
@@ -25,166 +23,18 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
   const [notification, setNotification] = useState<{type: 'success' | 'error', message: string} | null>(null);
   const { currentTheme, setTheme, themes: allThemes } = useTheme();
   const [appVersion, setAppVersion] = useState<string>('Loading...');
-  const [updateAvailable, setUpdateAvailable] = useState(false);
-  const [updateVersion, setUpdateVersion] = useState<string>('');
-  const [checkingForUpdates, setCheckingForUpdates] = useState(false);
-  const [isDownloading, setIsDownloading] = useState(false);
-  const [downloadProgress, setDownloadProgress] = useState(0);
-  const [updateLogs, setUpdateLogs] = useState<string[]>([]);
 
   useEffect(() => {
     loadAppVersion();
   }, []);
 
-  // Automatically check for updates after version is loaded
-  useEffect(() => {
-    if (appVersion !== 'Loading...' && appVersion !== 'Unknown') {
-      checkForUpdates();
-    }
-  }, [appVersion]);
-
-  const logToFile = async (message: string) => {
-    const timestamp = new Date().toISOString();
-    const logLine = `[${timestamp.split('T')[1].split('.')[0]}] ${message}`;
-    setUpdateLogs(prev => [...prev, logLine]);
-    console.log('[UpdateLog]', logLine);
-  };
-
   const loadAppVersion = async () => {
     try {
       const version = await getVersion();
       setAppVersion(version);
-      await logToFile(`App version loaded: ${version}`);
     } catch (error) {
       console.error('Failed to load app version:', error);
       setAppVersion('Unknown');
-      await logToFile('Failed to load app version');
-    }
-  };
-
-  const checkForUpdates = async () => {
-    setCheckingForUpdates(true);
-    try {
-      await logToFile('========================================');
-      await logToFile('🔍 Starting detailed update check...');
-      await logToFile(`📱 Current version: ${appVersion}`);
-      await logToFile(`🌐 Endpoint: https://github.com/KarolP-tech/FrameTrain/releases/latest/download/latest.json`);
-      await logToFile(`🔑 Pubkey: configured in tauri.conf.json`);
-      
-      console.log('[Settings/Updates] ========================================');
-      console.log('[Settings/Updates] Checking for updates...');
-      console.log('[Settings/Updates] Current version:', appVersion);
-      
-      const update = await check();
-      
-      // Detailed logging
-      if (update === null) {
-        await logToFile('❌ check() returned NULL');
-        await logToFile('⚠️ This means one of:');
-        await logToFile('  1. No newer version exists');
-        await logToFile('  2. Signature validation FAILED (empty/invalid sig)');
-        await logToFile('  3. Network error or JSON parse error');
-      } else {
-        await logToFile(`✅ check() returned object with keys: ${Object.keys(update).join(', ')}`);
-      }
-      
-      await logToFile(`📝 Full result: ${update ? JSON.stringify(update) : 'null'}`);
-      console.log('[Settings/Updates] Check result:', update);
-      
-      if (update && update.version) {
-        await logToFile('✅ Update available!');
-        await logToFile(`New version: ${update.version}`);
-        await logToFile(`Date: ${update.date || 'N/A'}`);
-        await logToFile(`Body: ${update.body || 'No description'}`);
-        await logToFile('========================================');
-        
-        console.log('[Settings/Updates] ✅ Update available!');
-        console.log('[Settings/Updates] New version:', update.version);
-        console.log('[Settings/Updates] ========================================');
-        
-        setUpdateAvailable(true);
-        setUpdateVersion(update.version);
-        setNotification({ type: 'success', message: `Update verfügbar: ${update.version}` });
-        setTimeout(() => setNotification(null), 3000);
-      } else {
-        await logToFile('ℹ️ No updates available (update is null or has no version)');
-        await logToFile('========================================');
-        
-        console.log('[Settings/Updates] ℹ️ No updates available');
-        console.log('[Settings/Updates] ========================================');
-        
-        setUpdateAvailable(false);
-        setNotification({ type: 'success', message: 'Du bist auf dem neuesten Stand!' });
-        setTimeout(() => setNotification(null), 3000);
-      }
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      await logToFile(`❌ Error: ${errorMessage}`);
-      await logToFile(`Error stack: ${error instanceof Error && error.stack ? error.stack : 'No stack trace'}`);
-      await logToFile(`Error details: ${JSON.stringify(error, null, 2)}`);
-      await logToFile('========================================');
-      
-      console.error('[Settings/Updates] ❌ Error checking for updates:', error);
-      console.error('[Settings/Updates] Error details:', JSON.stringify(error, null, 2));
-      console.error('[Settings/Updates] ========================================');
-      
-      setNotification({ type: 'error', message: `Fehler: ${errorMessage}` });
-      setTimeout(() => setNotification(null), 5000);
-    } finally {
-      setCheckingForUpdates(false);
-    }
-  };
-
-  const installUpdate = async () => {
-    if (!updateAvailable) return;
-
-    setIsDownloading(true);
-    setDownloadProgress(0);
-
-    try {
-      await logToFile('========================================');
-      await logToFile('Starting update installation...');
-      
-      const update = await check();
-      if (!update) {
-        throw new Error('Update nicht mehr verfügbar');
-      }
-
-      await logToFile(`Downloading update: ${update.version}`);
-
-      let totalDownloaded = 0;
-      const estimatedSize = 10 * 1024 * 1024;
-
-      await update.downloadAndInstall((event) => {
-        switch (event.event) {
-          case 'Started':
-            setDownloadProgress(0);
-            totalDownloaded = 0;
-            logToFile('Download started');
-            break;
-          case 'Progress':
-            totalDownloaded += event.data.chunkLength || 0;
-            const progress = (totalDownloaded / estimatedSize) * 100;
-            setDownloadProgress(Math.min(progress, 99));
-            break;
-          case 'Finished':
-            setDownloadProgress(100);
-            logToFile('Download finished');
-            break;
-        }
-      });
-
-      await logToFile('Update installed successfully. Relaunching app...');
-      await logToFile('========================================');
-      await relaunch();
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Failed to install update:', error);
-      await logToFile(`❌ Update installation failed: ${errorMessage}`);
-      await logToFile('========================================');
-      setNotification({ type: 'error', message: 'Fehler beim Installieren des Updates' });
-      setTimeout(() => setNotification(null), 3000);
-      setIsDownloading(false);
     }
   };
 
@@ -440,129 +290,75 @@ export default function Settings({ userData, onLogout }: SettingsProps) {
           <div>
             <div className="text-white font-semibold text-lg">FrameTrain Desktop {appVersion}</div>
             <div className="text-sm text-gray-400 mt-1">
-              {updateAvailable ? 'Update verfügbar' : 'Du bist auf dem neuesten Stand'}
-            </div>
-          </div>
-          {updateAvailable && (
-            <div className="px-3 py-1 bg-green-500/20 border border-green-500/30 rounded-full">
-              <span className="text-green-400 text-sm font-medium">Update verfügbar</span>
-            </div>
-          )}
-          {!updateAvailable && !checkingForUpdates && appVersion !== 'Loading...' && (
-            <div className="px-3 py-1 bg-purple-500/20 border border-purple-500/30 rounded-full">
-              <span className="text-purple-400 text-sm font-medium">✓ Aktuell</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Update Available Card */}
-      {updateAvailable && (
-        <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-6">
-          <div className="flex items-start gap-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
-              <Download className="w-6 h-6 text-white" />
-            </div>
-            <div className="flex-1">
-              <h3 className="text-xl font-bold text-white mb-2">Neue Version verfügbar!</h3>
-              <p className="text-gray-300 mb-4">
-                Version <span className="font-semibold text-purple-400">{updateVersion}</span> ist jetzt verfügbar. 
-                Aktualisiere, um die neuesten Features und Verbesserungen zu erhalten.
-              </p>
-              
-              {isDownloading ? (
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-gray-300">Download läuft...</span>
-                    <span className="text-purple-400 font-semibold">{downloadProgress.toFixed(0)}%</span>
-                  </div>
-                  <div className="h-2 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-300"
-                      style={{ width: `${downloadProgress}%` }}
-                    />
-                  </div>
-                  <p className="text-gray-400 text-xs">
-                    Die App wird nach dem Download automatisch neu gestartet.
-                  </p>
-                </div>
-              ) : (
-                <button
-                  onClick={installUpdate}
-                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold transition-all flex items-center gap-2"
-                >
-                  <Download className="w-5 h-5" />
-                  <span>Jetzt aktualisieren</span>
-                </button>
-              )}
+              Prüfe auf GitHub nach neuen Versionen
             </div>
           </div>
         </div>
-      )}
-
-      {/* Check for Updates Button */}
-      <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-        <h3 className="text-lg font-semibold text-white mb-4">Nach Updates suchen</h3>
-        <p className="text-gray-400 mb-4 text-sm">
-          Prüfe manuell, ob eine neue Version von FrameTrain verfügbar ist.
-        </p>
-        <button
-          onClick={checkForUpdates}
-          disabled={checkingForUpdates || isDownloading}
-          className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-        >
-          {checkingForUpdates ? (
-            <>
-              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              <span>Prüfe...</span>
-            </>
-          ) : (
-            <>
-              <Download className="w-4 h-4" />
-              <span>Nach Updates suchen</span>
-            </>
-          )}
-        </button>
       </div>
 
-      {/* Update Logs */}
+      {/* Check for Updates on GitHub */}
+      <div className="bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-purple-600 to-pink-600 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Download className="w-6 h-6 text-white" />
+          </div>
+          <div className="flex-1">
+            <h3 className="text-xl font-bold text-white mb-2">Nach Updates suchen</h3>
+            <p className="text-gray-300 mb-4">
+              Neue Versionen von FrameTrain werden auf GitHub veröffentlicht. 
+              Klicke unten, um die neueste Version zu prüfen und herunterzuladen.
+            </p>
+            
+            <a
+              href="https://github.com/KarolP-tech/FrameTrain/releases/latest"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white rounded-lg font-semibold transition-all"
+            >
+              <Download className="w-5 h-5" />
+              <span>Zu GitHub Releases</span>
+              <ExternalLink className="w-4 h-4" />
+            </a>
+          </div>
+        </div>
+      </div>
+
+      {/* Installation Instructions */}
       <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-semibold text-white">Update-Logs</h3>
-          <button
-            onClick={() => setUpdateLogs([])}
-            className="px-3 py-1 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-lg text-sm transition-colors"
-          >
-            Logs löschen
-          </button>
+        <h3 className="text-lg font-semibold text-white mb-4">Installation</h3>
+        <div className="space-y-3 text-gray-400 text-sm">
+          <p>
+            <span className="font-semibold text-white">1.</span> Öffne die GitHub Releases-Seite
+          </p>
+          <p>
+            <span className="font-semibold text-white">2.</span> Lade die passende Version herunter:
+          </p>
+          <ul className="ml-6 space-y-1 list-disc">
+            <li><span className="text-white">.dmg</span> für macOS</li>
+            <li><span className="text-white">.exe</span> oder <span className="text-white">.msi</span> für Windows</li>
+            <li><span className="text-white">.AppImage</span> oder <span className="text-white">.deb</span> für Linux</li>
+          </ul>
+          <p>
+            <span className="font-semibold text-white">3.</span> Installiere die neue Version
+          </p>
+          <p>
+            <span className="font-semibold text-white">4.</span> Starte FrameTrain neu
+          </p>
         </div>
-        
-        <div className="bg-black/30 border border-white/10 rounded-lg p-4 font-mono text-xs max-h-64 overflow-y-auto">
-          {updateLogs.length === 0 ? (
-            <div className="text-gray-500 text-center py-4">
-              Keine Logs verfügbar. Klicke auf "Nach Updates suchen" um Logs zu sehen.
-            </div>
-          ) : (
-            updateLogs.map((log, index) => (
-              <div key={index} className="text-gray-300 mb-1">
-                {log}
-              </div>
-            ))
-          )}
-        </div>
-        
-        <p className="text-xs text-gray-500 mt-2">
-          💡 Diese Logs helfen beim Debuggen von Update-Problemen
-        </p>
       </div>
 
       {/* Auto-Update Info */}
-      <div className="bg-white/5 rounded-xl p-6 border border-white/10">
-        <h3 className="text-lg font-semibold text-white mb-4">Automatische Updates</h3>
-        <p className="text-gray-400 text-sm">
-          FrameTrain prüft automatisch beim Start auf neue Versionen. Du wirst benachrichtigt, 
-          wenn ein Update verfügbar ist.
-        </p>
+      <div className="bg-blue-500/10 rounded-xl p-6 border border-blue-500/20">
+        <div className="flex items-start gap-3">
+          <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+          <div>
+            <h3 className="text-white font-semibold mb-1">Automatische Update-Prüfung</h3>
+            <p className="text-blue-300 text-sm">
+              FrameTrain prüft automatisch beim Start auf neue Versionen und 
+              benachrichtigt dich, wenn ein Update verfügbar ist.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );
